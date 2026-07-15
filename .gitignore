@@ -1,0 +1,14 @@
+# 1. Ignore absolutely everything by default
+*
+
+# 2. Allow Git to traverse directory structures (necessary to find nested files)
+!*/
+
+# 3. Explicitly whitelist this .gitignore file itself
+!.gitignore
+
+# 4. Whitelist your chosen files/folders (Examples below)
+!README.md
+!src/
+!main.py
+!Generated text.png
