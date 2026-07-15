@@ -9,6 +9,5 @@
 
 # 4. Whitelist your chosen files/folders (Examples below)
 !README.md
-!src/
-!main.py
 !Generated text.png
+!alphabet
