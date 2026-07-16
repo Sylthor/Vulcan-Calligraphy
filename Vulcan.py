@@ -6,14 +6,25 @@ from scipy.integrate import quad
 import matplotlib.image as mpimg
 import os
 
+current_directory = os.path.dirname(os.path.abspath(__file__))
+
 ### Definitions to keep in mind in this script
 # Numh - The vulcan characters
 # Spline - The vertical lines where the characters are centered
-# Bar - The horizontal line from which the spines are connected
+# Bars - The dashes indicating the need for swirls
 # Start - The patam, the first symbol in the upper left corner
+
+# TODO
+# - The height is left slightly ambiguous at the moment. The current rule is:
+#       "After 500 pixels, it tries to add line-break. Always complete the full (compound)word before line-break."
+# - Add vectorized nuhm.
+# - Along with previous todos, ensure the thickness of the swirls are correct. This is ambiguous
+#   since the nuhm are images but swirls are graphs which are invariant under window resizing.
+
 
 # Fine tuning parameters
 maximal_window_height = 500
+linewidth = 1.5
 
 def subplots(rows,columns,height_scale,override=False,sharex=False,wcs=None,custom_width_factor=1):
     """
@@ -100,13 +111,12 @@ def curve(roots,ax):
     
     c = c_list[np.argmax(equivalent_width)]
     print("Optimal parameter c:",c)
-    # gradient = np.gradient(equivalent_width,c_list[1]-c_list[0])
-    # c5 = c_list[np.argmin(gradient)]
 
     # Plotting the optimization and the comparrison between the swirls
     fig_optimize,axs = subplots(2,1,1,override=True)
     axs[0].plot(c_list,equivalent_width,color="blue",label="Equivalent width function")
-    axs[0].vlines(x=c,ymin=np.min(equivalent_width),ymax=np.max(equivalent_width),color="black",linestyle="--",label=r"Optimal $c$")
+    axs[0].vlines(x=c,ymin=np.min(equivalent_width),ymax=np.max(equivalent_width),
+                  color="black",linestyle="--",label=r"Optimal $c=$"+str(np.round(c,6)))
     axs[0].set_xlabel(r"$c$ parameter")
     axs[0].set_ylabel("Equivalent width")
     axs[1].plot(x,x*0,color="black")
@@ -114,17 +124,16 @@ def curve(roots,ax):
     y_optimized = polynomial(x,roots,c=c)/np.max(abspolynomial(x,roots,c=c))*(-1)**(len(roots)+1)
     axs[1].plot(x,y_original,color="red",label="Original swirls")
     axs[1].plot(x,y_optimized,color="black",label="Optimized swirls")
-    # c_new = -0.004
-    # axs[1].plot(x,polynomial(x,roots,c=c_new)/np.max(abspolynomial(x,roots,c=c_new))*(-1)**(len(roots)+1),color="orange",label="Optimized swirls")
-    # axs[0].vlines(x=c_new,ymin=np.min(equivalent_width),ymax=np.max(equivalent_width),color="black",linestyle="--",label=r"Optimal $c$")
     axs[1].set_xlabel("Vertical coordinate")
     axs[1].set_ylabel("Horizontal coordinate")
+    axs[1].set_title(bars)
     fig_optimize.legend()
-    fig_optimize.savefig("Optimizer.png")
+    fig_optimize.savefig(current_directory+"/Optimizer.png")
     y = polynomial(x,roots,c)
 
+    # Ensure the curve ALWAYS starts to the right
     y = y/max(abs(y))*(-1)**(len(roots)+1)
-    ax.plot(y*width/2+line,x,c="black",linewidth=1.5)
+    ax.plot(y*width/2+line,x,c="black",linewidth=linewidth)
 def separate_string_into_clumps(string):
     """
     Splitting the provided Romanized string into clumps corresponding to valid numh.
@@ -136,9 +145,10 @@ def separate_string_into_clumps(string):
         nuhms (list,string): List of the separated numh.
     """
     # Sort the list of letters by length in descending order
-    letters = os.listdir("alphabet")
+    letters = os.listdir(current_directory+"/alphabet")
     for i in range(len(letters)):
         letters[i]=letters[i].replace(".png","")
+        # letters[i]=letters[i].replace(".svg","")
     sorted_letters = sorted(letters, key=len, reverse=True)
 
     # Initialize the result list to store the clumps of letters
@@ -165,7 +175,7 @@ def image(imagename,ax):
     '''
     The function displays the numh corresponding to the romanized text clump.
     '''
-    img = mpimg.imread("alphabet//"+imagename)
+    img = mpimg.imread(current_directory+"/alphabet//"+imagename)
     numh_height,nuhm_width,__ = np.shape(img)
 
     horizontal_offset = 0
@@ -200,7 +210,7 @@ string = "ahtortorki'fer eik-toraan-aish-ano-de"
 # string = "Wa'itaren na'kanok-veh ik ki'shetal rivlidalsu na'nisan t'Zun. Ki'pusatal fe-toyeht uzhaya ik. 7 na'du. Kuv wiri ki'lasha sanu ro'fah'voh fna'raf-ar'kada-sakat na' skladan na' korsaya sfek org."
 # string = "rules-of-Mau"
 # string = "Nam-tor nash-veh nameniklahs"
-string = "ven-dol-tar rufai-bosh. kup-bau-tor ven-dol-tar na'sha'nazh-kap zo-uf nazh-kap. fe-toyeht na'Gen-lis-tal"
+# string = "ven-dol-tar rufai-bosh. kup-bau-tor ven-dol-tar na'sha'nazh-kap zo-uf nazh-kap. fe-toyeht na'Gen-lis-tal"
 # string = " Nam-tor nen t'tanaf-kitaun t'nash-veh fupa s'vi'le-eshan t'toyeht-irak-dvubikuvan heh tsuri-dvuperuv. Nam-tor nash-kilko tsurkanik fupa s'deshker t'du ha."
 # string = "svi'nash-shi."
 # string = "ketilik pitoh-su'us-ek'tal"
@@ -228,10 +238,7 @@ image("start.png",main_axs[0])
 height_history = [height]
 bars = [height]
 for i in range(len(clumps)):
-    # if(i == len(clumps)-1 and len(bars)>1):
-    #     bars.append(height)
-    #     curve(bars,main_axs[0])
-    #     bars = [height]
+    # If it is the end of a sentence, add vertical lines, line-break and start new sentence. Reset bars
     if(clumps[i]=="."):
         if(len(bars)>1):
             bars.append(height)
@@ -252,7 +259,6 @@ for i in range(len(clumps)):
             curve(bars,main_axs[0])
         image(clumps[i]+".png",main_axs[0])
         image(clumps[i]+".png",main_axs[0])
-        # image(clumps[i]+".png")
         bars = [height]
     
     # If there are bars, do not add a nuhm, just prepare for the swirls.
@@ -262,10 +268,6 @@ for i in range(len(clumps)):
     # If normal nuhms, just add them.
     if(clumps[i]!="-" and clumps[i]!="." and clumps[i]!=" "):
         image(clumps[i]+".png",main_axs[0])
-    # if(clumps[i] == "newline2"):
-    #     line += width*1.1
-    #     height = -34
-    #     image("newline.png")
 
     # If the line exceeds the specified height limit, insert a line-break and continue on new line.
     if(height > maximal_window_height and clumps[i]==" "):
@@ -275,19 +277,19 @@ for i in range(len(clumps)):
         image("newline.png",main_axs[0])
         bars=[height]
     height_history.append(height)
+
+# The horizontal spine
 main_axs[0].plot([0,width/2+line],[0,0],color="black",linewidth=2.0)
 main_axs[0].set_xlim(-width,width+line)
 main_axs[0].set_ylim(max_height,-34)
 main_fig.tight_layout()
-main_fig.savefig("Generated text.png")
-# plt.show()
+main_fig.savefig(current_directory+"/Generated text.png")
 
 import subprocess
 from PIL import Image
 from pathlib import Path
 
 def png_to_svg_with_brightness(input_png, output_svg, brightness=0.55,scale_up=1/10):
-    current_directory = os.path.dirname(os.path.abspath(__file__))
     potrace_path = current_directory+"/potrace-1.16.win64/potrace.exe"  # Full path to Potrace
     input_png = Path(input_png)
     temp_pbm = input_png.with_suffix(".pbm")
@@ -306,8 +308,6 @@ def png_to_svg_with_brightness(input_png, output_svg, brightness=0.55,scale_up=1
     ], check=True)
 
     temp_pbm.unlink()  # cleanup
-
-current_directory = os.path.dirname(os.path.abspath(__file__))
 
 png_to_svg_with_brightness(
     current_directory+"/Generated text.png",
@@ -340,23 +340,23 @@ def list_paths_and_subpaths(svg_path):
     print(f"\nTotal subpaths (potential FreeCAD regions): {total_subpaths}")
     return path_numbers
 
-path_numbers = list_paths_and_subpaths("output.svg")
+path_numbers = list_paths_and_subpaths(current_directory+"/output.svg")
 print(path_numbers)
 # ---------------------------------------------------
 
-f = open("Demo.svg")
+f = open(current_directory+"/Demo.svg")
 content = f.read()
 
 text_to_copy = content.split("<svg")[1].split("<path")[0]
 # print(text_to_copy)
 
-f = open("output.svg")
+f = open(current_directory+"/output.svg")
 content = f.read()
 text_to_replace = content.split("<svg")[1].split("<path")[0]
 
 content = content.replace(text_to_replace,text_to_copy)
 
-with open("output.svg", "w") as f:
+with open(current_directory+"/output.svg", "w") as f:
   f.write(content)
 
 from svgpathtools import parse_path
@@ -391,7 +391,7 @@ def svg_paths_bbox(svg_file):
 
     return width, height, (global_xmin, global_ymin, global_xmax, global_ymax)
 
-svg_file = "output.svg"
+svg_file = current_directory+"/output.svg"
 width, height, bbox = svg_paths_bbox(svg_file)
 
 print("Width:", width)
