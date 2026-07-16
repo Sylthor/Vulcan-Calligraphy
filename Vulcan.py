@@ -12,6 +12,9 @@ import os
 # Bar - The horizontal line from which the spines are connected
 # Start - The patam, the first symbol in the upper left corner
 
+# Fine tuning parameters
+maximal_window_height = 500
+
 def subplots(rows,columns,height_scale,override=False,sharex=False,wcs=None,custom_width_factor=1):
     """
     Sets up figures for pretty plotting with (sub)plots. For a single plot, use rows=1, columns=1.
@@ -83,81 +86,45 @@ def polynomial(x,roots,c):
     #     y = polynomial*(np.exp(-c*x))
     return y
 def abspolynomial(x,roots,c):
-    polynomial = 1
-    for i in range(len(roots)):
-        polynomial *= ((x) - roots[i])
-    y = polynomial*(np.exp(c*x))
-    # if(c<1):
-    #     y = polynomial*(1-np.exp(c*x))
-    # if(c>=1):
-    #     y = polynomial*(np.exp(-c*x))
-    return y**2
-def curve(roots):
-    # c = 0.013651365136513646/2
-    # c = -0.005976597659765971
-    # c = -0.009812981298129811
+    return np.abs(polynomial(x,roots,c))
+
+def curve(roots,ax):
     c_list = np.linspace(-0.1,0.1,10000)
-    x = np.linspace(min(bars),max(bars),100)
+    x = np.linspace(min(bars),max(bars),1000)
     roots = bars
     print(roots)
-    sum_list = []
-    sum_list1 = []
+    equivalent_width = []
     for i in range(len(c_list)):
-        sum = quad(polynomial,min(roots),max(roots),args=(roots,c_list[i]))[0]
-        sum1 = quad(abspolynomial,min(roots),max(roots),args=(roots,c_list[i]))[0]
-        sum_list.append(sum/max(polynomial(x,roots,c_list[i])))
-        sum_list1.append(sum1/max(abspolynomial(x,roots,c_list[i])))
-    # fig,axs = subplots(1,1,1)
-    # axs[0].plot(x,polynomial(x,roots,c=0))
-    # axs[0].plot(x,polynomial(x,roots,c=0.1))
-    # plt.show()
-    sum_list = np.array(sum_list)
-    sum_list1 = np.array(sum_list1)
-    s1 = sum_list/max(abs(sum_list))
-    s2 = sum_list1/max(abs(sum_list1))
-    s3 = 1/sum_list*1/sum_list1/max(abs(1/sum_list*1/sum_list1))
-    s4 = (sum_list+sum_list1)/max(abs(sum_list+sum_list1))
-    gradient = np.gradient(s2,c_list[1]-c_list[0])
-    ddxx = np.gradient(gradient,c_list[1]-c_list[0])
-    # print(sum_list/max(abs(sum_list)))
-    # superfunction = 1/sum_list*sum_list1/max(abs(1/sum_list*sum_list1))
-    c1 = c_list[np.argmin(s1)]
-    c2 = c_list[np.argmax(s2)]
-    c3 = c_list[np.argmin(s3)]
-    c4 = c_list[np.argmax(s4)]
-    c5 = c_list[np.argmin(gradient)]
-    # print(c1)
-    print(c2)
-    print(c5)
-    # print(c3)
-    # print(c4)
-    # plt.show()
-    # plt.plot(c_list,s1,label="1")
-    # # plt.vlines(x=c1,ymin=-1,ymax=1,linestyles="--")
-    # plt.plot(c_list,s2,label="2")
-    # plt.vlines(x=c2,ymin=-1,ymax=1,linestyles="--")
-    # plt.plot(c_list,gradient/max(abs(gradient)))
-    # plt.plot(c_list,s3,label="3")
-    # plt.vlines(x=c3,ymin=-1,ymax=1,linestyles="--")
-    # plt.plot(c_list,s4,label="4")
-    # plt.vlines(x=c4,ymin=-1,ymax=1,linestyles="--")
-    # plt.legend()
-    # plt.show()
-    # plt.plot(c_list,s2,label="2")
-    # plt.plot(c_list,gradient/max(abs(gradient)))
-    # plt.plot(c_list,ddxx/max(abs(ddxx)))
-    # plt.vlines(x=0,ymax=1,ymin=0,linestyles="--")
-    # plt.show()
-    c = c5
-    # c = c2
-    # c = 0.0228
+        integrated_area = quad(abspolynomial,min(roots),max(roots),args=(roots,c_list[i]))[0]
+        equivalent_width.append(integrated_area/max((abspolynomial(x,roots,c_list[i]))))
+    
+    c = c_list[np.argmax(equivalent_width)]
+    print("Optimal parameter c:",c)
+    # gradient = np.gradient(equivalent_width,c_list[1]-c_list[0])
+    # c5 = c_list[np.argmin(gradient)]
+
+    # Plotting the optimization and the comparrison between the swirls
+    fig_optimize,axs = subplots(2,1,1,override=True)
+    axs[0].plot(c_list,equivalent_width,color="blue",label="Equivalent width function")
+    axs[0].vlines(x=c,ymin=np.min(equivalent_width),ymax=np.max(equivalent_width),color="black",linestyle="--",label=r"Optimal $c$")
+    axs[0].set_xlabel(r"$c$ parameter")
+    axs[0].set_ylabel("Equivalent width")
+    axs[1].plot(x,x*0,color="black")
+    y_original = polynomial(x,roots,c=0)/np.max(abspolynomial(x,roots,c=0))*(-1)**(len(roots)+1)
+    y_optimized = polynomial(x,roots,c=c)/np.max(abspolynomial(x,roots,c=c))*(-1)**(len(roots)+1)
+    axs[1].plot(x,y_original,color="red",label="Original swirls")
+    axs[1].plot(x,y_optimized,color="black",label="Optimized swirls")
+    # c_new = -0.004
+    # axs[1].plot(x,polynomial(x,roots,c=c_new)/np.max(abspolynomial(x,roots,c=c_new))*(-1)**(len(roots)+1),color="orange",label="Optimized swirls")
+    # axs[0].vlines(x=c_new,ymin=np.min(equivalent_width),ymax=np.max(equivalent_width),color="black",linestyle="--",label=r"Optimal $c$")
+    axs[1].set_xlabel("Vertical coordinate")
+    axs[1].set_ylabel("Horizontal coordinate")
+    fig_optimize.legend()
+    fig_optimize.savefig("Optimizer.png")
     y = polynomial(x,roots,c)
-    # print(sum/max(polynomial(x,roots,c)))
-    # print(sum1/max(abspolynomial(x,roots,c)),(max(roots)-min(roots))/2)
-    # print(sum1/sum)
 
     y = y/max(abs(y))*(-1)**(len(roots)+1)
-    plt.plot(y*width/2+line,x,c="black",linewidth=1.5)
+    ax.plot(y*width/2+line,x,c="black",linewidth=1.5)
 def separate_string_into_clumps(string):
     """
     Splitting the provided Romanized string into clumps corresponding to valid numh.
@@ -166,7 +133,7 @@ def separate_string_into_clumps(string):
         string (string): Romanized string.
     
     Returns:
-        result (list,string): List of the separated numh.
+        nuhms (list,string): List of the separated numh.
     """
     # Sort the list of letters by length in descending order
     letters = os.listdir("alphabet")
@@ -175,61 +142,57 @@ def separate_string_into_clumps(string):
     sorted_letters = sorted(letters, key=len, reverse=True)
 
     # Initialize the result list to store the clumps of letters
-    result = []
-
-    # Initialize the index to start at the beginning of the string
+    nuhms = []
     i = 0
-
     while i < len(string):
         # Try to match the longest possible letter clump
         matched = False
         for letter in sorted_letters:
             # If the substring matches the letter clump
             if string[i:i+len(letter)] == letter:
-                result.append(letter)
+                nuhms.append(letter)
                 i += len(letter)
                 matched = True
                 break
         if not matched:
             # If no clump is matched, add the single character
             print(string[i])
-            result.append(string[i])
+            nuhms.append(string[i])
             i += 1
+    return nuhms
 
-    return result
-def image(imagename):
+def image(imagename,ax):
     '''
     The function displays the numh corresponding to the romanized text clump.
     '''
     img = mpimg.imread("alphabet//"+imagename)
-    a,b,__ = np.shape(img)
-    print(imagename,a,b)
-    delta = 0
+    numh_height,nuhm_width,__ = np.shape(img)
+
+    horizontal_offset = 0
     if(imagename=="start.png"):
-        delta = 7
+        horizontal_offset = 7
     global width
     global height
     global max_height
-    if(b>width):
-        width=b
-    plt.imshow(img,extent=[-b/2+delta+line,b/2+delta+line,height+a,height])
-    height += a
+    if(nuhm_width > width):
+        width = nuhm_width
+    ax.imshow(img,extent=[-nuhm_width/2+horizontal_offset+line,nuhm_width/2+horizontal_offset+line,height+numh_height,height])
+    height += numh_height
     if(max_height<height):
         max_height = height
-    # plt.plot([0,0],[y+a,y+a+2],color="black",linewidth=3)
-    # plt.plot([0,0],[y,y+2],color="black",linewidth=3)
 
-fig, ax = plt.subplots(1, 1, figsize=(16, 16))
-ax.set_axis_off()
+main_fig, main_axs = plt.subplots(1, 1, figsize=(16, 16))
+main_axs = [main_axs]
+# main_fig, main_axs = subplots(1,1,4,override=True)
+main_axs[0].set_axis_off()
 
-# print(letters)
 
 string = "Stal Stonn le-matya k'stonn ik tal-tor svi'mazhiv po'ta zeshal aushfa mal-nef-hinek t'sa-veh. Ish-wak svi-aru."
-string = "Nam-tor Olozhika kluterek t'sha'sutenivaya k'ish she-tor etek s'nezhak isan utvau vah sha'kakhartayek."
-string = "Rok-tor etek ta sanoi nash uzh-rarav ik ki'fereik-tor nameT'Prion. Dungi olau ish-veh kunli pa'ta paribau k'kanok-veh svi'Shi'svatorai."
+# string = "Nam-tor Olozhika kluterek t'sha'sutenivaya k'ish she-tor etek s'nezhak isan utvau vah sha'kakhartayek."
+# string = "Rok-tor etek ta sanoi nash uzh-rarav ik ki'fereik-tor nameT'Prion. Dungi olau ish-veh kunli pa'ta paribau k'kanok-veh svi'Shi'svatorai."
 # string = "os-pid-vuhlkansu"
 # string = "na'Gen-lis-tal"
-# string = "tor-tor-ki'fereik-tor"
+string = "ahtortorki'fer eik-toraan-aish-ano-de"
 # string = "Kol-ut-shan"
 # string = "Ragtaya na'Gen-lis-tal Vuhlkansu eh Gen-lislar os-pid-vuhlkansu ba-golik heh iyi-golik"
 # string = "dif-tor heh smusma"
@@ -237,7 +200,7 @@ string = "Rok-tor etek ta sanoi nash uzh-rarav ik ki'fereik-tor nameT'Prion. Dun
 # string = "Wa'itaren na'kanok-veh ik ki'shetal rivlidalsu na'nisan t'Zun. Ki'pusatal fe-toyeht uzhaya ik. 7 na'du. Kuv wiri ki'lasha sanu ro'fah'voh fna'raf-ar'kada-sakat na' skladan na' korsaya sfek org."
 # string = "rules-of-Mau"
 # string = "Nam-tor nash-veh nameniklahs"
-# string = "ven-dol-tar rufai-bosh. kup-bau-tor ven-dol-tar na'sha'nazh-kap zo-uf nazh-kap. fe-toyeht na'Gen-lis-tal"
+string = "ven-dol-tar rufai-bosh. kup-bau-tor ven-dol-tar na'sha'nazh-kap zo-uf nazh-kap. fe-toyeht na'Gen-lis-tal"
 # string = " Nam-tor nen t'tanaf-kitaun t'nash-veh fupa s'vi'le-eshan t'toyeht-irak-dvubikuvan heh tsuri-dvuperuv. Nam-tor nash-kilko tsurkanik fupa s'deshker t'du ha."
 # string = "svi'nash-shi."
 # string = "ketilik pitoh-su'us-ek'tal"
@@ -245,69 +208,78 @@ string = "Rok-tor etek ta sanoi nash uzh-rarav ik ki'fereik-tor nameT'Prion. Dun
 # string = "ro-kasaya"
 # string = "Nash-vel ra. Sular vi. Fai-tor du n'au ha. Katravahsular t'du ha."
 # string = "Ki'nam-tor nash-veh heh kwon-sum dungau nam-tor t'hai'la t'du."
-string = "123-4567-890"
 # translate = "Stonn killed the le-matya with an antler that he found in the sand after the animal bit his kneecap. It was mid-afternoon."
 # translate = "Logic is the cement of our civilization with which we ascen from chaos, using reason as our guide."
 # plt.title("\""+string+"\"\n I have and always shall be your friend.")
 # plt.title("\""+string+"\"\n "+translate)
 
+
+if(string[-1] != "."):
+    string += "."
 clumps = separate_string_into_clumps(string.lower())
 print(clumps)
 
 width = 0
 height = -34 # Required for the patam. Approximately half of the height of the numh.
 max_height = height
-bars = 0
-bars = [0]
+
 line = 0
-image("start.png")
+image("start.png",main_axs[0])
 height_history = [height]
 bars = [height]
 for i in range(len(clumps)):
-    if((i == len(clumps)-1 or clumps[i] == "newline2") and len(bars)>1):
-        bars.append(height)
-        curve(bars)
-        bars = [height]
+    # if(i == len(clumps)-1 and len(bars)>1):
+    #     bars.append(height)
+    #     curve(bars,main_axs[0])
+    #     bars = [height]
     if(clumps[i]=="."):
         if(len(bars)>1):
             bars.append(height)
-            curve(bars)
-        image(" .png")
-        image(" .png")
-        image(" .png")
+            curve(bars,main_axs[0])
+        image(" .png",main_axs[0])
+        image(" .png",main_axs[0])
+        image(" .png",main_axs[0])
         if(i!=len(clumps)-1):
             line += width*1.1
             height = -34
-            image("newline.png")
+            image("newline3.png",main_axs[0])
             bars = [height]
+    
+    # If the space between two words in the middle of a sentence, add some spacing and reset bars.
     if(clumps[i]==" " and clumps[i-1]!="."):
         if(len(bars)>1):
             bars.append(height)
-            curve(bars)
-        image(clumps[i]+".png")
-        image(clumps[i]+".png")
+            curve(bars,main_axs[0])
+        image(clumps[i]+".png",main_axs[0])
+        image(clumps[i]+".png",main_axs[0])
         # image(clumps[i]+".png")
         bars = [height]
+    
+    # If there are bars, do not add a nuhm, just prepare for the swirls.
     if(clumps[i]=="-"):
         bars.append(height)
-    if(clumps[i]!="-" and clumps[i]!="."):
-        image(clumps[i]+".png")
-    if(clumps[i] == "newline2"):
+    
+    # If normal nuhms, just add them.
+    if(clumps[i]!="-" and clumps[i]!="." and clumps[i]!=" "):
+        image(clumps[i]+".png",main_axs[0])
+    # if(clumps[i] == "newline2"):
+    #     line += width*1.1
+    #     height = -34
+    #     image("newline.png")
+
+    # If the line exceeds the specified height limit, insert a line-break and continue on new line.
+    if(height > maximal_window_height and clumps[i]==" "):
+        image("newline2.png",main_axs[0])
         line += width*1.1
         height = -34
-        image("newline.png")
-    if(height>500 and clumps[i]==" "):
-        image("newline2.png")
-        line += width*1.1
-        height = -34
-        image("newline.png")
+        image("newline.png",main_axs[0])
         bars=[height]
     height_history.append(height)
-plt.plot([0,width/2+line],[0,0],color="black",linewidth=2.0)
-plt.xlim(-width,width+line)
-plt.ylim(max_height,-34)
-plt.tight_layout()
-plt.savefig("Generated text.png")
+main_axs[0].plot([0,width/2+line],[0,0],color="black",linewidth=2.0)
+main_axs[0].set_xlim(-width,width+line)
+main_axs[0].set_ylim(max_height,-34)
+main_fig.tight_layout()
+main_fig.savefig("Generated text.png")
 # plt.show()
 
 import subprocess
