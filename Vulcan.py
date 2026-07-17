@@ -17,14 +17,9 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 # TODO
 # - The height is left slightly ambiguous at the moment. The current rule is:
 #       "After 500 pixels, it tries to add line-break. Always complete the full (compound)word before line-break."
-# - Add vectorized nuhm.
-# - Along with previous todos, ensure the thickness of the swirls are correct. This is ambiguous
-#   since the nuhm are images but swirls are graphs which are invariant under window resizing.
 
 
 # Fine tuning parameters
-maximal_window_height = 5000
-# linewidth = 1.5
 file_ending = ".svg"
 
 def subplots(rows,columns,height_scale,override=False,sharex=False,wcs=None,custom_width_factor=1):
@@ -109,7 +104,7 @@ def log_polynomial(x,roots,c,normalization_factor=1):
     # axs[0].plot(x,polynomial)
     y = polynomial+c*x
     return y
-def curve(roots,ax):
+def curve(roots,ax,line,linewidth,contrast):
     c_list = np.linspace(-0.1,0.1,10000)
     x = np.linspace(min(roots),max(roots),1000)
 
@@ -153,7 +148,8 @@ def curve(roots,ax):
 
     # Ensure the curve ALWAYS starts to the right
     y = y/max(abs(y))*(-1)**(len(roots)+1)
-    ax.plot(y*width/2+line,x,c="black",linewidth=linewidth)
+    ax.fill_betweenx(x,y*get_svg_size("start"+file_ending)[0]/2+line,y*contrast*get_svg_size("start"+file_ending)[0]/2+line,color="black")
+    ax.plot(y*get_svg_size("start"+file_ending)[0]/2+line,x,c="black",linewidth=linewidth)
 def separate_string_into_clumps(string):
     """
     Splitting the provided Romanized string into clumps corresponding to valid numh.
@@ -241,10 +237,8 @@ def _collect_paths(elem, parent_matrix, out):
         _collect_paths(child, matrix, out)
 
 
-def image_svg(imagename, ax, target_width=None, target_height=None):
-    global width, height, max_height
-
-    tree = ET.parse("alphabet_vectorized//" + imagename)
+def image_svg(imagename, ax, line, height, target_width=None, target_height=None):
+    tree = ET.parse(current_directory+"/alphabet_vectorized//" + imagename)
     root = tree.getroot()
 
     if 'viewBox' in root.attrib:
@@ -274,10 +268,10 @@ def image_svg(imagename, ax, target_width=None, target_height=None):
     sx = disp_w / svg_w
     sy = disp_h / svg_h
 
-    horizontal_offset = 55 if imagename == "start.svg" else 0
+    horizontal_offset = 7*8 if imagename == "start.svg" else 0
 
-    if disp_w > width:
-        width = disp_w
+    # if disp_w > width:
+    #     width = disp_w
 
     x0 = -disp_w / 2 + horizontal_offset + line
     y0 = height
@@ -305,8 +299,7 @@ def image_svg(imagename, ax, target_width=None, target_height=None):
         ))
 
     height += disp_h
-    if max_height < height:
-        max_height = height
+    return height
 def get_svg_size(imagename):
     tree = ET.parse("alphabet_vectorized//" + imagename)
     root = tree.getroot()
@@ -314,7 +307,7 @@ def get_svg_size(imagename):
     if 'viewBox' in root.attrib:
         __, __, svg_w, svg_h = map(float, root.attrib['viewBox'].split())
     return svg_w,svg_h
-def calculate_window_size(clumps):
+def calculate_window_size(clumps,line_break_height):
     figsize_x, figsize_y = get_svg_size("start.svg")
     figsize_x += figsize_x
     line_height = -34
@@ -338,7 +331,7 @@ def calculate_window_size(clumps):
             line_height += get_svg_size(clumps[i]+file_ending)[1]
 
         # If the line exceeds the specified height limit, insert a line-break and continue on new line.
-        if(line_height > maximal_window_height and clumps[i]=="_"):
+        if(line_height > line_break_height and clumps[i]=="_"):
             line_height += get_svg_size("newline2"+file_ending)[1]
             figsize_x += get_svg_size("start.svg")[0]*1.1
             if(line_height>figsize_y):
@@ -346,15 +339,14 @@ def calculate_window_size(clumps):
             line_height = -34
             # image("horizontal_line"+file_ending,main_axs[0])
             line_height += get_svg_size("newline"+file_ending)[1]
-        # height_history.append(height)
     return figsize_x,figsize_y
 
-def image(imagename,ax):
+def image(imagename,ax,line,height):
     '''
     The function displays the numh corresponding to the romanized text clump.
     '''
     if(".svg" in imagename):
-        image_svg(imagename,ax)
+        return image_svg(imagename,ax,line,height)
     else:
         img = mpimg.imread(current_directory+"/alphabet//"+imagename)
         numh_height,nuhm_width,__ = np.shape(img)
@@ -362,15 +354,9 @@ def image(imagename,ax):
         horizontal_offset = 0
         if(imagename=="start.png"):
             horizontal_offset = 7
-        global width
-        global height
-        global max_height
-        if(nuhm_width > width):
-            width = nuhm_width
         ax.imshow(img,extent=[-nuhm_width/2+horizontal_offset+line,nuhm_width/2+horizontal_offset+line,height+numh_height,height])
         height += numh_height
-        if(max_height<height):
-            max_height = height
+        return height
 
 
 string = "Stal nameStonn le-matya k'stonn ik tal-tor svi'mazhiv po'ta zeshal aushfa mal-nef-hinek t'sa-veh. Ish-wak svi-aru."
@@ -390,7 +376,7 @@ string = "Stal nameStonn le-matya k'stonn ik tal-tor svi'mazhiv po'ta zeshal aus
 # string = "rules-of-Mau"
 # string = "Nam-tor nash-veh nameniklahs"
 # string = "ven-dol-tar rufai-bosh. kup-bau-tor ven-dol-tar na'sha'nazh-kap zo-uf nazh-kap. fe-toyeht na'Gen-lis-tal"
-# string = " Nam-tor nen t'tanaf-kitaun t'nash-veh fupa s'vi'le-eshan t'toyeht-irak-dvubikuvan heh tsuri-dvuperuv. Nam-tor nash-kilko tsurkanik fupa s'deshker t'du ha."
+string = " Nam-tor nen t'tanaf-kitaun t'nash-veh fupa s'vi'le-eshan t'toyeht-irak-dvubikuvan heh tsuri-dvuperuv. Nam-tor nash-kilko tsurkanik fupa s'deshker t'du ha."
 # string = "svi'nash-shi."
 # string = "ketilikpitoh-su'us-ek'tal"
 # string = "galu-dahshaya"
@@ -402,196 +388,199 @@ string = "Stal nameStonn le-matya k'stonn ik tal-tor svi'mazhiv po'ta zeshal aus
 # plt.title("\""+string+"\"\n I have and always shall be your friend.")
 # plt.title("\""+string+"\"\n "+translate)
 
-if(string[-1] != "."):
-    string += "."
-string = string.replace(" ","_")
-print(string)
-clumps = separate_string_into_clumps(string.lower())
-print(clumps)
+def generate_vulcan_calligraphy(string,line_break_height,contrast):
+    line_break_height = line_break_height*4 # Pixel to coordinate conversion
+    if(string[-1] != "."):
+        string += "."
+    string = string.replace(" ","_")
+    print(string)
+    clumps = separate_string_into_clumps(string.lower())
+    print(clumps)
 
-figsize_x = 16
-figsize_y = 16
-if file_ending == ".svg":
-    figsize_x,figsize_y = calculate_window_size(clumps)
-linewidth = 1.5*np.sqrt((1+(figsize_y/(figsize_x))**2)/2)
-print("Linewidth:",linewidth)
-print("Figsize:",figsize_x,figsize_y)
-# TODO Look at the size parameters here
-main_fig, main_axs = plt.subplots(1, 1, figsize=(16, 16*figsize_y/(figsize_x)))
-main_axs = [main_axs]
-# main_fig, main_axs = subplots(1,1,4,override=True)
-# main_axs[0].set_axis_off()
+    figsize_x = 16
+    figsize_y = 16
+    if file_ending == ".svg":
+        figsize_x,figsize_y = calculate_window_size(clumps,line_break_height)
+    linewidth = 1.5*np.sqrt((1+(figsize_y/(figsize_x))**2)/2)
+    print("Linewidth:",linewidth)
+    print("Figsize:",figsize_x,figsize_y)
+    # TODO Look at the size parameters here
+    main_fig, main_axs = plt.subplots(1, 1, figsize=(16, 16*figsize_y/(figsize_x)))
+    main_axs = [main_axs]
+    main_axs[0].set_axis_off()
 
-width = 0
-height = -34 # Required for the patam. Approximately half of the height of the numh.
-max_height = height
+    width = get_svg_size("start"+file_ending)[0]
+    height = -34 # Required for the patam. Approximately half of the height of the numh.
+    max_height = height
 
-line = 0
-# image("start.png",main_axs[0])
-# image("vect.svg",main_axs[0],target_height=86,target_width=77)
-image("start"+file_ending,main_axs[0])
-height_history = [height]
-bars = [height]
-for i in range(len(clumps)):
-    # If it is the end of a sentence, add vertical lines, line-break and start new sentence. Reset bars
-    if(clumps[i]=="."):
-        if(len(bars)>1):
+    line = 0 # The position of the active spine
+    # image("start.png",main_axs[0])
+    # image("vect.svg",main_axs[0],target_height=86,target_width=77)
+    height = image("start"+file_ending,main_axs[0],line,height)
+    bars = [height]
+    for i in range(len(clumps)):
+        # If it is the end of a sentence, add vertical lines, line-break and start new sentence. Reset bars
+        if(clumps[i]=="."):
+            if(len(bars)>1):
+                bars.append(height)
+                curve(bars,main_axs[0],line,linewidth,contrast)
+            height = image("_"+file_ending,main_axs[0],line,height)
+            height = image("_"+file_ending,main_axs[0],line,height)
+            height = image("_"+file_ending,main_axs[0],line,height)
+            max_height = np.max([max_height,height])
+            if(i!=len(clumps)-1):
+                line += width*1.1
+                height = -34
+                # image("horizontal_line"+file_ending,main_axs[0])
+                height = image("newline3"+file_ending,main_axs[0],line,height)
+                bars = [height]
+        
+        # If the space between two words in the middle of a sentence, add some spacing and reset bars.
+        if(clumps[i]=="_" and clumps[i-1]!="."):
+            if(len(bars)>1):
+                bars.append(height)
+                curve(bars,main_axs[0],line,linewidth,contrast)
+            if(height < line_break_height):
+                height = image(clumps[i]+file_ending,main_axs[0],line,height)
+                height = image(clumps[i]+file_ending,main_axs[0],line,height)
+            bars = [height]
+        
+        # If there are bars, do not add a nuhm, just prepare for the swirls.
+        if(clumps[i]=="-"):
             bars.append(height)
-            curve(bars,main_axs[0])
-        image("_"+file_ending,main_axs[0])
-        image("_"+file_ending,main_axs[0])
-        image("_"+file_ending,main_axs[0])
-        if(i!=len(clumps)-1):
+        
+        # If normal nuhms, just add them.
+        if(clumps[i]!="-" and clumps[i]!="." and clumps[i]!="_"):
+            height = image(clumps[i]+file_ending,main_axs[0],line,height)
+
+        # If the line exceeds the specified height limit, insert a line-break and continue on new line.
+        if(height > line_break_height and clumps[i]=="_"):
+            height = image("newline2"+file_ending,main_axs[0],line,height)
+            max_height = np.max([max_height,height])
             line += width*1.1
             height = -34
             # image("horizontal_line"+file_ending,main_axs[0])
-            image("newline3"+file_ending,main_axs[0])
-            bars = [height]
-    
-    # If the space between two words in the middle of a sentence, add some spacing and reset bars.
-    if(clumps[i]=="_" and clumps[i-1]!="."):
-        if(len(bars)>1):
-            bars.append(height)
-            curve(bars,main_axs[0])
-        image(clumps[i]+file_ending,main_axs[0])
-        image(clumps[i]+file_ending,main_axs[0])
-        bars = [height]
-    
-    # If there are bars, do not add a nuhm, just prepare for the swirls.
-    if(clumps[i]=="-"):
-        bars.append(height)
-    
-    # If normal nuhms, just add them.
-    if(clumps[i]!="-" and clumps[i]!="." and clumps[i]!="_"):
-        image(clumps[i]+file_ending,main_axs[0])
+            height = image("newline"+file_ending,main_axs[0],line,height)
+            bars=[height]
 
-    # If the line exceeds the specified height limit, insert a line-break and continue on new line.
-    if(height > maximal_window_height and clumps[i]=="_"):
-        image("newline2"+file_ending,main_axs[0])
-        line += width*1.1
-        height = -34
-        # image("horizontal_line"+file_ending,main_axs[0])
-        image("newline"+file_ending,main_axs[0])
-        bars=[height]
-    height_history.append(height)
+    # The horizontal spine
+    main_axs[0].plot([0,width/2+line],[240,240],color="black",linewidth=linewidth)
+    main_axs[0].set_xlim(-width,width+line)
+    main_axs[0].set_ylim(max_height,-34)
+    main_fig.tight_layout()
+    main_fig.savefig(current_directory+"/Generated text.png")
 
-# The horizontal spine
-main_axs[0].plot([0,width/2+line],[240,240],color="black",linewidth=linewidth)
-main_axs[0].set_xlim(-width,width+line)
-main_axs[0].set_ylim(max_height,-34)
-main_fig.tight_layout()
-main_fig.savefig(current_directory+"/Generated text.png")
+# generate_vulcan_calligraphy(string)
 
+# import subprocess
+# from PIL import Image
+# from pathlib import Path
 
-import subprocess
-from PIL import Image
-from pathlib import Path
+# def png_to_svg_with_brightness(input_png, output_svg, brightness=0.55,scale_up=1/10):
+#     potrace_path = current_directory+"/potrace-1.16.win64/potrace.exe"  # Full path to Potrace
+#     input_png = Path(input_png)
+#     temp_pbm = input_png.with_suffix(".pbm")
 
-def png_to_svg_with_brightness(input_png, output_svg, brightness=0.55,scale_up=1/10):
-    potrace_path = current_directory+"/potrace-1.16.win64/potrace.exe"  # Full path to Potrace
-    input_png = Path(input_png)
-    temp_pbm = input_png.with_suffix(".pbm")
+#     # Convert to grayscale + apply brightness threshold
+#     img = Image.open(input_png).convert("L")
+#     img = img.point(lambda p: 255 if p/255 > brightness else 0)  # threshold
+#     img.save(temp_pbm)
 
-    # Convert to grayscale + apply brightness threshold
-    img = Image.open(input_png).convert("L")
-    img = img.point(lambda p: 255 if p/255 > brightness else 0)  # threshold
-    img.save(temp_pbm)
+#     # Run Potrace to convert PBM to SVG
+#     subprocess.run([
+#         potrace_path,
+#         str(temp_pbm),
+#         "--svg",
+#         "-o", str(output_svg)
+#     ], check=True)
 
-    # Run Potrace to convert PBM to SVG
-    subprocess.run([
-        potrace_path,
-        str(temp_pbm),
-        "--svg",
-        "-o", str(output_svg)
-    ], check=True)
+#     temp_pbm.unlink()  # cleanup
 
-    temp_pbm.unlink()  # cleanup
+# png_to_svg_with_brightness(
+#     current_directory+"/Generated text.png",
+#     current_directory+"/output.svg",
+#     brightness=0.55
+# )
 
-png_to_svg_with_brightness(
-    current_directory+"/Generated text.png",
-    current_directory+"/output.svg",
-    brightness=0.55
-)
+# import xml.etree.ElementTree as ET
+# from pathlib import Path
 
-import xml.etree.ElementTree as ET
-from pathlib import Path
+# def count_subpaths_in_path(d):
+#     return d.count('M') + d.count('m')
 
-def count_subpaths_in_path(d):
-    return d.count('M') + d.count('m')
+# def list_paths_and_subpaths(svg_path):
+#     path_numbers = []
+#     svg_path = Path(svg_path)
+#     tree = ET.parse(svg_path)
+#     root = tree.getroot()
+#     ns = {"svg": "http://www.w3.org/2000/svg"}
 
-def list_paths_and_subpaths(svg_path):
-    path_numbers = []
-    svg_path = Path(svg_path)
-    tree = ET.parse(svg_path)
-    root = tree.getroot()
-    ns = {"svg": "http://www.w3.org/2000/svg"}
+#     paths = root.findall(".//svg:path", ns)
+#     total_subpaths = 0
+#     for i, path in enumerate(paths, 1):
+#         d_attr = path.attrib.get("d", "")
+#         subs = count_subpaths_in_path(d_attr)
+#         total_subpaths += subs
+#         print(f"Path {i}: {subs} subpaths")
+#         path_numbers.append(subs)
 
-    paths = root.findall(".//svg:path", ns)
-    total_subpaths = 0
-    for i, path in enumerate(paths, 1):
-        d_attr = path.attrib.get("d", "")
-        subs = count_subpaths_in_path(d_attr)
-        total_subpaths += subs
-        print(f"Path {i}: {subs} subpaths")
-        path_numbers.append(subs)
+#     print(f"\nTotal subpaths (potential FreeCAD regions): {total_subpaths}")
+#     return path_numbers
 
-    print(f"\nTotal subpaths (potential FreeCAD regions): {total_subpaths}")
-    return path_numbers
+# path_numbers = list_paths_and_subpaths(current_directory+"/output.svg")
+# print(path_numbers)
+# # ---------------------------------------------------
 
-path_numbers = list_paths_and_subpaths(current_directory+"/output.svg")
-print(path_numbers)
-# ---------------------------------------------------
+# f = open(current_directory+"/Demo.svg")
+# content = f.read()
 
-f = open(current_directory+"/Demo.svg")
-content = f.read()
+# text_to_copy = content.split("<svg")[1].split("<path")[0]
+# # print(text_to_copy)
 
-text_to_copy = content.split("<svg")[1].split("<path")[0]
-# print(text_to_copy)
+# f = open(current_directory+"/output.svg")
+# content = f.read()
+# text_to_replace = content.split("<svg")[1].split("<path")[0]
 
-f = open(current_directory+"/output.svg")
-content = f.read()
-text_to_replace = content.split("<svg")[1].split("<path")[0]
+# content = content.replace(text_to_replace,text_to_copy)
 
-content = content.replace(text_to_replace,text_to_copy)
+# with open(current_directory+"/output.svg", "w") as f:
+#   f.write(content)
 
-with open(current_directory+"/output.svg", "w") as f:
-  f.write(content)
+# from svgpathtools import parse_path
+# def svg_paths_bbox(svg_file):
+#     tree = ET.parse(svg_file)
+#     root = tree.getroot()
 
-from svgpathtools import parse_path
-def svg_paths_bbox(svg_file):
-    tree = ET.parse(svg_file)
-    root = tree.getroot()
+#     # Handle namespaces
+#     ns = {"svg": "http://www.w3.org/2000/svg"}
 
-    # Handle namespaces
-    ns = {"svg": "http://www.w3.org/2000/svg"}
+#     # Track global bounding box
+#     global_xmin = float("inf")
+#     global_xmax = float("-inf")
+#     global_ymin = float("inf")
+#     global_ymax = float("-inf")
 
-    # Track global bounding box
-    global_xmin = float("inf")
-    global_xmax = float("-inf")
-    global_ymin = float("inf")
-    global_ymax = float("-inf")
+#     # Find all path elements
+#     for path_elem in root.findall(".//svg:path", ns):
+#         d = path_elem.get("d")
+#         if not d:
+#             continue
+#         path = parse_path(d)
+#         xmin, xmax, ymin, ymax = path.bbox()
 
-    # Find all path elements
-    for path_elem in root.findall(".//svg:path", ns):
-        d = path_elem.get("d")
-        if not d:
-            continue
-        path = parse_path(d)
-        xmin, xmax, ymin, ymax = path.bbox()
+#         global_xmin = min(global_xmin, xmin)
+#         global_xmax = max(global_xmax, xmax)
+#         global_ymin = min(global_ymin, ymin)
+#         global_ymax = max(global_ymax, ymax)
 
-        global_xmin = min(global_xmin, xmin)
-        global_xmax = max(global_xmax, xmax)
-        global_ymin = min(global_ymin, ymin)
-        global_ymax = max(global_ymax, ymax)
+#     width = global_xmax - global_xmin
+#     height = global_ymax - global_ymin
 
-    width = global_xmax - global_xmin
-    height = global_ymax - global_ymin
+#     return width, height, (global_xmin, global_ymin, global_xmax, global_ymax)
 
-    return width, height, (global_xmin, global_ymin, global_xmax, global_ymax)
+# svg_file = current_directory+"/output.svg"
+# width, height, bbox = svg_paths_bbox(svg_file)
 
-svg_file = current_directory+"/output.svg"
-width, height, bbox = svg_paths_bbox(svg_file)
-
-print("Width:", width)
-print("Height:", height)
-print(bbox)
+# print("Width:", width)
+# print("Height:", height)
+# print(bbox)
