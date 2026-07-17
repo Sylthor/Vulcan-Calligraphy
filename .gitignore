@@ -9,7 +9,7 @@
 
 # 4. Whitelist your chosen files/folders (Examples below)
 !README.md
-!Generated text.png
+# !Generated text.png
 !alphabet/*
 !alphabet_vectorized/*
 !Vulcan.py
