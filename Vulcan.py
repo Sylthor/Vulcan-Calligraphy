@@ -23,9 +23,9 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 
 
 # Fine tuning parameters
-maximal_window_height = 500
-linewidth = 1.5
-file_ending = ".png"
+maximal_window_height = 5000
+# linewidth = 1.5
+file_ending = ".svg"
 
 def subplots(rows,columns,height_scale,override=False,sharex=False,wcs=None,custom_width_factor=1):
     """
@@ -99,18 +99,37 @@ def polynomial(x,roots,c):
     return y
 def abspolynomial(x,roots,c):
     return np.abs(polynomial(x,roots,c))
-
+def integrated_function(x,roots,c,normalization_factor=1):
+    return abspolynomial(x,roots,c)/normalization_factor
+def log_polynomial(x,roots,c,normalization_factor=1):
+    polynomial = 1
+    for i in range(len(roots)):
+        polynomial += np.log(abs((x) - roots[i]))
+    # fig,axs = subplots(1,1,1)
+    # axs[0].plot(x,polynomial)
+    y = polynomial+c*x
+    return y
 def curve(roots,ax):
     c_list = np.linspace(-0.1,0.1,10000)
     x = np.linspace(min(roots),max(roots),1000)
-    # roots = bars
-    # roots_norm = np.array(roots)/np.max(roots)
+
     equivalent_width = []
     for i in range(len(c_list)):
+        # integrated_area = quad(abspolynomial,min(roots),max(roots),args=(roots,c_list[i]))[0]
+        # equivalent_width.append(integrated_area/max((abspolynomial(x,roots,c_list[i]))))
+        normalization_factor = np.max((abspolynomial(x,roots,c_list[i])))
         integrated_area = quad(abspolynomial,min(roots),max(roots),args=(roots,c_list[i]))[0]
-        equivalent_width.append(integrated_area/max((abspolynomial(x,roots,c_list[i]))))
+        # print(np.max((abspolynomial(x,roots,c_list[i]))))
+        # print(integrated_area)
+        if(np.isfinite(integrated_area)):
+            equivalent_width.append(integrated_area/normalization_factor)
+        else:
+            equivalent_width.append(0)
     
-    c = c_list[np.argmax(equivalent_width)]
+    # c = c_list[np.argmax(equivalent_width)]
+    c = c_list[np.nanargmax(equivalent_width)]
+    # c = c_list[np.nanargmax(equivalent_width)]/np.max(roots)
+    # print(equivalent_width)
     print("Optimal parameter c:",c)
 
     # Plotting the optimization and the comparrison between the swirls
@@ -127,7 +146,7 @@ def curve(roots,ax):
     axs[1].plot(x,y_optimized,color="black",label="Optimized swirls")
     axs[1].set_xlabel("Vertical coordinate")
     axs[1].set_ylabel("Horizontal coordinate")
-    axs[1].set_title(bars)
+    axs[1].set_title(str(roots)+"   "+str(roots/np.max(roots)))
     fig_optimize.legend()
     fig_optimize.savefig(current_directory+"/Optimizer.png")
     y = polynomial(x,roots,c)
@@ -297,11 +316,11 @@ def get_svg_size(imagename):
     return svg_w,svg_h
 def calculate_window_size(clumps):
     figsize_x, figsize_y = get_svg_size("start.svg")
+    figsize_x += figsize_x
     line_height = -34
     for i in range(len(clumps)):
         # If it is the end of a sentence, add vertical lines, line-break and start new sentence. Reset bars
         if(clumps[i]=="."):
-            print(i,"Rule A",line_height,figsize_x)
             line_height += 3*get_svg_size("_"+file_ending)[1]
             if(line_height>figsize_y):
                 figsize_y = line_height
@@ -312,17 +331,14 @@ def calculate_window_size(clumps):
         
         # If the space between two words in the middle of a sentence, add some spacing and reset bars.
         if(clumps[i]=="_" and clumps[i-1]!="."):
-            print(i,"Rule B")
             line_height += 2*get_svg_size(clumps[i]+file_ending)[1]
         
         # If normal nuhms, just add them.
         if(clumps[i]!="-" and clumps[i]!="." and clumps[i]!="_"):
-            print(i,"Rule C",line_height)
             line_height += get_svg_size(clumps[i]+file_ending)[1]
 
         # If the line exceeds the specified height limit, insert a line-break and continue on new line.
         if(line_height > maximal_window_height and clumps[i]=="_"):
-            print(i,"Rule D")
             line_height += get_svg_size("newline2"+file_ending)[1]
             figsize_x += get_svg_size("start.svg")[0]*1.1
             if(line_height>figsize_y):
@@ -337,7 +353,6 @@ def image(imagename,ax):
     '''
     The function displays the numh corresponding to the romanized text clump.
     '''
-    # print(imagename)
     if(".svg" in imagename):
         image_svg(imagename,ax)
     else:
@@ -358,13 +373,14 @@ def image(imagename,ax):
             max_height = height
 
 
-# string = "Stal Stonn le-matya k'stonn ik tal-tor svi'mazhiv po'ta zeshal aushfa mal-nef-hinek t'sa-veh. Ish-wak svi-aru."
+string = "Stal nameStonn le-matya k'stonn ik tal-tor svi'mazhiv po'ta zeshal aushfa mal-nef-hinek t'sa-veh. Ish-wak svi-aru."
 # string = "Nam-tor Olozhika kluterek t'sha'sutenivaya k'ish she-tor etek s'nezhak isan utvau vah sha'kakhartayek."
 # string = "Rok-tor etek ta sanoi nash uzh-rarav ik ki'fereik-tor nameT'Prion. Dungi olau ish-veh kunli pa'ta paribau k'kanok-veh svi'Shi'svatorai."
 # string = "os-pid-vuhlkansu"
 # string = "na'Gen-lis-tal a"
 # string = "ahtortorki'fer eik-toraan-aish-ano-de"
-# string = "mal-nef-hinek"
+# string = "mal-nef-hinek mal-nef-hinek mal-nef-hinek mal-nef-hinek"
+# string = "mal-nef-hinek mal-nef-hinek mal-nef-hinek mal-nef-hinek mal-nef-hinek"
 # string = "mal mal mal mal"
 # string = "Kol-ut-shan"
 # string = "Ragtaya na'Gen-lis-tal Vuhlkansu eh Gen-lislar os-pid-vuhlkansu ba-golik heh iyi-golik"
@@ -376,9 +392,9 @@ def image(imagename,ax):
 # string = "ven-dol-tar rufai-bosh. kup-bau-tor ven-dol-tar na'sha'nazh-kap zo-uf nazh-kap. fe-toyeht na'Gen-lis-tal"
 # string = " Nam-tor nen t'tanaf-kitaun t'nash-veh fupa s'vi'le-eshan t'toyeht-irak-dvubikuvan heh tsuri-dvuperuv. Nam-tor nash-kilko tsurkanik fupa s'deshker t'du ha."
 # string = "svi'nash-shi."
-string = "ketilikpitoh-su'us-ek'tal"
+# string = "ketilikpitoh-su'us-ek'tal"
 # string = "galu-dahshaya"
-# string = "ro-kasaya"
+# string = "ro-kasaya ro-kasaya"
 # string = "Nash-vel ra. Sular vi. Fai-tor du n'au ha. Katravahsular t'du ha."
 # string = "Ki'nam-tor nash-veh heh kwon-sum dungau nam-tor t'hai'la t'du."
 # translate = "Stonn killed the le-matya with an antler that he found in the sand after the animal bit his kneecap. It was mid-afternoon."
@@ -397,12 +413,14 @@ figsize_x = 16
 figsize_y = 16
 if file_ending == ".svg":
     figsize_x,figsize_y = calculate_window_size(clumps)
+linewidth = 1.5*np.sqrt((1+(figsize_y/(figsize_x))**2)/2)
+print("Linewidth:",linewidth)
 print("Figsize:",figsize_x,figsize_y)
 # TODO Look at the size parameters here
-main_fig, main_axs = plt.subplots(1, 1, figsize=(16, 16*figsize_y/figsize_x))
+main_fig, main_axs = plt.subplots(1, 1, figsize=(16, 16*figsize_y/(figsize_x)))
 main_axs = [main_axs]
 # main_fig, main_axs = subplots(1,1,4,override=True)
-main_axs[0].set_axis_off()
+# main_axs[0].set_axis_off()
 
 width = 0
 height = -34 # Required for the patam. Approximately half of the height of the numh.
@@ -458,7 +476,7 @@ for i in range(len(clumps)):
     height_history.append(height)
 
 # The horizontal spine
-main_axs[0].plot([0,width/2+line],[240,240],color="black",linewidth=2.0)
+main_axs[0].plot([0,width/2+line],[240,240],color="black",linewidth=linewidth)
 main_axs[0].set_xlim(-width,width+line)
 main_axs[0].set_ylim(max_height,-34)
 main_fig.tight_layout()
