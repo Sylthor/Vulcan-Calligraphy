@@ -23,6 +23,7 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 file_ending = ".svg"
 debug = False
 padding_factor = 1.1
+tel_width = 0.5
 
 def subplots(rows,columns,height_scale,override=False,sharex=False,wcs=None,custom_width_factor=1):
     """
@@ -122,7 +123,7 @@ def curve(roots,ax,line,linewidth,contrast):
             equivalent_width.append(integrated_area/normalization_factor)
         else:
             equivalent_width.append(0)
-    
+    # print(equivalent_width)
     # c = c_list[np.argmax(equivalent_width)]
     c = c_list[np.nanargmax(equivalent_width)]
     # c = c_list[np.nanargmax(equivalent_width)]/np.max(roots)
@@ -151,11 +152,12 @@ def curve(roots,ax,line,linewidth,contrast):
     axs[1].set_title(str(roots)+"   "+str(roots/np.max(roots)))
     fig_optimize.legend()
     fig_optimize.savefig(current_directory+"/Optimizer.png")
+    plt.close(fig_optimize)
     y = polynomial(x,roots,c)
 
     # Ensure the curve ALWAYS starts to the right
     y = y/max(abs(y))*(-1)**(len(roots)+1)
-    ax.fill_betweenx(x,y*get_svg_size("start"+file_ending)[0]/2+line,y*contrast*get_svg_size("start"+file_ending)[0]/2+line,color="black")
+    ax.fill_betweenx(x,y*get_svg_size("start"+file_ending)[0]*tel_width+line,y*contrast*get_svg_size("start"+file_ending)[0]*tel_width+line,color="black")
     ax.plot(y*get_svg_size("start"+file_ending)[0]/2+line,x,c="black",linewidth=linewidth)
 def separate_string_into_clumps(string):
     """
@@ -468,6 +470,7 @@ def generate_vulcan_calligraphy(string,line_break_height,contrast):
         if(clumps[i]=="_" and clumps[i-1]!="."):
             if(len(bars)>1):
                 bars.append(height)
+                print(bars)
                 curve(bars,main_axs[0],line,linewidth,contrast)
             if(height+2*get_svg_size("_"+file_ending)[1] < line_break_height):
                 height = image(clumps[i]+file_ending,main_axs[0],line,height)
