@@ -12,5 +12,7 @@
 # !Generated text.png
 !alphabet/*
 !alphabet_vectorized/*
+!demo_images/*
+
 !Vulcan.py
 !playground.py

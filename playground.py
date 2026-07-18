@@ -1,6 +1,6 @@
 import Vulcan as vulcan
 
-line_break_height = 1000 # The number of pixels set as the height after which it will insert line-breaks. Typical nuhm height is ~360 pixels
+line_break_height = 900 # The number of pixels set as the height after which it will insert line-breaks. Typical nuhm height is ~360 pixels
 contrast = 1.05 # Affects the thin-to-thick-to-thin parts of swirls. Set to 1 for no effect.
 
 # Rules for correct display of strings:

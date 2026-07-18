@@ -21,6 +21,8 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 
 # Fine tuning parameters
 file_ending = ".svg"
+debug = False
+padding_factor = 1.1
 
 def subplots(rows,columns,height_scale,override=False,sharex=False,wcs=None,custom_width_factor=1):
     """
@@ -128,7 +130,7 @@ def curve(roots,ax,line,linewidth,contrast):
     print("Optimal parameter c:",c)
 
     # Plotting the optimization and the comparrison between the swirls
-    fig_optimize,axs = subplots(2,1,1,override=True)
+    fig_optimize,axs = subplots(2,1,1.0,override=True)
     axs[0].plot(c_list,equivalent_width,color="blue",label="Equivalent width function")
     axs[0].vlines(x=c,ymin=np.min(equivalent_width),ymax=np.max(equivalent_width),
                   color="black",linestyle="--",label=r"Optimal $c=$"+str(np.round(c,6)))
@@ -139,8 +141,13 @@ def curve(roots,ax,line,linewidth,contrast):
     y_optimized = polynomial(x,roots,c=c)/np.max(abspolynomial(x,roots,c=c))*(-1)**(len(roots)+1)
     axs[1].plot(x,y_original,color="red",label="Original swirls")
     axs[1].plot(x,y_optimized,color="black",label="Optimized swirls")
+
+    # random_c = np.random.random()/10/4
+    # axs[0].vlines(x=random_c,ymin=np.min(equivalent_width),ymax=np.max(equivalent_width),
+    #               color="purple",linestyle="--",label=r"Random $c=$"+str(np.round(random_c,6)))
+    # axs[1].plot(x,polynomial(x,roots,c=random_c)/np.max(abspolynomial(x,roots,c=random_c))*(-1)**(len(roots)+1),color="purple",label="Random swirls")
     axs[1].set_xlabel("Vertical coordinate")
-    axs[1].set_ylabel("Horizontal coordinate")
+    axs[1].set_ylabel("Normalized horizontal \n coordinate")
     axs[1].set_title(str(roots)+"   "+str(roots/np.max(roots)))
     fig_optimize.legend()
     fig_optimize.savefig(current_directory+"/Optimizer.png")
@@ -310,15 +317,15 @@ def get_svg_size(imagename):
 def calculate_window_size(clumps,line_break_height):
     figsize_x, figsize_y = get_svg_size("start.svg")
     figsize_x += figsize_x
-    line_height = -34
+    line_height = -34+figsize_y
+    print("Start_size:",get_svg_size("start.svg")[0])
     for i in range(len(clumps)):
         # If it is the end of a sentence, add vertical lines, line-break and start new sentence. Reset bars
         if(clumps[i]=="."):
             line_height += 3*get_svg_size("_"+file_ending)[1]
-            if(line_height>figsize_y):
-                figsize_y = line_height
+            figsize_y = np.max([figsize_y,line_height])
             if(i!=len(clumps)-1):
-                figsize_x += get_svg_size("start.svg")[0]*1.1
+                figsize_x += get_svg_size("start.svg")[0]*padding_factor
                 line_height = -34
                 line_height += get_svg_size("newline3"+file_ending)[1]
         
@@ -331,14 +338,14 @@ def calculate_window_size(clumps,line_break_height):
             line_height += get_svg_size(clumps[i]+file_ending)[1]
 
         # If the line exceeds the specified height limit, insert a line-break and continue on new line.
-        if(line_height > line_break_height and clumps[i]=="_"):
+        if(line_height+2*get_svg_size("_"+file_ending)[1] > line_break_height and clumps[i]=="_"):
             line_height += get_svg_size("newline2"+file_ending)[1]
-            figsize_x += get_svg_size("start.svg")[0]*1.1
-            if(line_height>figsize_y):
-                figsize_y = line_height
+            figsize_x += get_svg_size("start.svg")[0]*padding_factor
+            figsize_y = np.max([figsize_y,line_height])
             line_height = -34
             # image("horizontal_line"+file_ending,main_axs[0])
             line_height += get_svg_size("newline"+file_ending)[1]
+        # print(i,clumps[i],figsize_x)
     return figsize_x,figsize_y
 
 def image(imagename,ax,line,height):
@@ -359,7 +366,7 @@ def image(imagename,ax,line,height):
         return height
 
 
-string = "Stal nameStonn le-matya k'stonn ik tal-tor svi'mazhiv po'ta zeshal aushfa mal-nef-hinek t'sa-veh. Ish-wak svi-aru."
+# string = "Stal nameStonn le-matya k'stonn ik tal-tor svi'mazhiv po'ta zeshal aushfa mal-nef-hinek t'sa-veh. Ish-wak svi-aru."
 # string = "Nam-tor Olozhika kluterek t'sha'sutenivaya k'ish she-tor etek s'nezhak isan utvau vah sha'kakhartayek."
 # string = "Rok-tor etek ta sanoi nash uzh-rarav ik ki'fereik-tor nameT'Prion. Dungi olau ish-veh kunli pa'ta paribau k'kanok-veh svi'Shi'svatorai."
 # string = "os-pid-vuhlkansu"
@@ -376,7 +383,7 @@ string = "Stal nameStonn le-matya k'stonn ik tal-tor svi'mazhiv po'ta zeshal aus
 # string = "rules-of-Mau"
 # string = "Nam-tor nash-veh nameniklahs"
 # string = "ven-dol-tar rufai-bosh. kup-bau-tor ven-dol-tar na'sha'nazh-kap zo-uf nazh-kap. fe-toyeht na'Gen-lis-tal"
-string = " Nam-tor nen t'tanaf-kitaun t'nash-veh fupa s'vi'le-eshan t'toyeht-irak-dvubikuvan heh tsuri-dvuperuv. Nam-tor nash-kilko tsurkanik fupa s'deshker t'du ha."
+# string = " Nam-tor nen t'tanaf-kitaun t'nash-veh fupa s'vi'le-eshan t'toyeht-irak-dvubikuvan heh tsuri-dvuperuv. Nam-tor nash-kilko tsurkanik fupa s'deshker t'du ha."
 # string = "svi'nash-shi."
 # string = "ketilikpitoh-su'us-ek'tal"
 # string = "galu-dahshaya"
@@ -401,13 +408,35 @@ def generate_vulcan_calligraphy(string,line_break_height,contrast):
     figsize_y = 16
     if file_ending == ".svg":
         figsize_x,figsize_y = calculate_window_size(clumps,line_break_height)
-    linewidth = 1.5*np.sqrt((1+(figsize_y/(figsize_x))**2)/2)
+    figsize_x = figsize_x
+    # linewidth = 1.5*np.sqrt((1+np.max([1,figsize_x/figsize_y,figsize_y/figsize_x])**2)/2)
+    # linewidth = 2.5*np.sqrt(2)/np.sqrt(1+np.max([1,figsize_x/figsize_y,figsize_y/figsize_x])**2)
+    linewidth = 1.5
     print("Linewidth:",linewidth)
     print("Figsize:",figsize_x,figsize_y)
+
     # TODO Look at the size parameters here
-    main_fig, main_axs = plt.subplots(1, 1, figsize=(16, 16*figsize_y/(figsize_x)))
+    # if(figsize_y>figsize_x):
+    #     main_fig, main_axs = plt.subplots(1, 1, figsize=(16, 16*figsize_y/figsize_x),layout="constrained")
+    # if(figsize_y<figsize_x):
+    #     main_fig, main_axs = plt.subplots(1, 1, figsize=(16*figsize_x/figsize_y, 16),layout="constrained")
+
+    
+    if figsize_y > figsize_x:
+        w, h = 16, 16 * figsize_y / figsize_x
+    else:
+        w, h = 16 * figsize_x / figsize_y, 16
+
+    # Create the figure blank
+    main_fig = plt.figure(figsize=(w, h))
+
+    # Add a single axes that takes up 100% of the width and height [left, bottom, width, height]
+    main_axs = main_fig.add_axes([0, 0, 1, 1])
+    
+    plt.tight_layout()
     main_axs = [main_axs]
-    main_axs[0].set_axis_off()
+    if(not debug):
+        main_axs[0].set_axis_off()
 
     width = get_svg_size("start"+file_ending)[0]
     height = -34 # Required for the patam. Approximately half of the height of the numh.
@@ -429,7 +458,7 @@ def generate_vulcan_calligraphy(string,line_break_height,contrast):
             height = image("_"+file_ending,main_axs[0],line,height)
             max_height = np.max([max_height,height])
             if(i!=len(clumps)-1):
-                line += width*1.1
+                line += width*padding_factor
                 height = -34
                 # image("horizontal_line"+file_ending,main_axs[0])
                 height = image("newline3"+file_ending,main_axs[0],line,height)
@@ -440,7 +469,7 @@ def generate_vulcan_calligraphy(string,line_break_height,contrast):
             if(len(bars)>1):
                 bars.append(height)
                 curve(bars,main_axs[0],line,linewidth,contrast)
-            if(height < line_break_height):
+            if(height+2*get_svg_size("_"+file_ending)[1] < line_break_height):
                 height = image(clumps[i]+file_ending,main_axs[0],line,height)
                 height = image(clumps[i]+file_ending,main_axs[0],line,height)
             bars = [height]
@@ -454,19 +483,22 @@ def generate_vulcan_calligraphy(string,line_break_height,contrast):
             height = image(clumps[i]+file_ending,main_axs[0],line,height)
 
         # If the line exceeds the specified height limit, insert a line-break and continue on new line.
-        if(height > line_break_height and clumps[i]=="_"):
+        if(height+2*get_svg_size("_"+file_ending)[1] > line_break_height and clumps[i]=="_"):
             height = image("newline2"+file_ending,main_axs[0],line,height)
             max_height = np.max([max_height,height])
-            line += width*1.1
+            line += width*padding_factor
             height = -34
             # image("horizontal_line"+file_ending,main_axs[0])
             height = image("newline"+file_ending,main_axs[0],line,height)
             bars=[height]
-
+        # print(i,clumps[i],line+2*width)
     # The horizontal spine
-    main_axs[0].plot([0,width/2+line],[240,240],color="black",linewidth=linewidth)
+    main_axs[0].plot([0,width/2+line],[240,240],color="black",linewidth=linewidth*1.5)
     main_axs[0].set_xlim(-width,width+line)
+    print(width,line,figsize_x,figsize_y)
     main_axs[0].set_ylim(max_height,-34)
+    if(debug):
+        main_axs[0].hlines(y=line_break_height,xmin=-width,xmax=width+line,color="red",linestyle="--")
     main_fig.tight_layout()
     main_fig.savefig(current_directory+"/Generated text.png")
 
