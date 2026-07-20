@@ -5,6 +5,7 @@ from scipy.integrate import quad
 # from scipy.special import lambertw
 import matplotlib.image as mpimg
 import os
+from matplotlib.backends.backend_pdf import PdfPages
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -20,10 +21,30 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 
 
 # Fine tuning parameters
-file_ending = ".svg"
 debug = False
-padding_factor = 1.1
-tel_width = 0.5
+
+centered_on_nuhm = False
+
+# Parameters for spaces and end-lines in number of black spaces, where a blank space is 10 pixels (in .png format).
+subbranch_height = 5 # Min=5
+space_height = 3 # Min=0
+ending_height = 5 # Min=0
+
+# Other specifications
+resolution = 32 # In figsize. Default is 16, so the scaling is res/16.
+padding_factor = 1.1 # In (start-)widths to add space on the side.
+tel_width = 0.5 # In widths, for maximal outswing.
+
+list_of_figures = []
+
+def save_images_in_pdf(filename,list_of_figures):
+    with PdfPages(filename) as pdf:
+        for fig in list_of_figures:
+            # Write the specific figure instance to the document
+            pdf.savefig(fig)
+            
+            # Explicitly release the figure from memory now that it is written
+            plt.close(fig)
 
 def subplots(rows,columns,height_scale,override=False,sharex=False,wcs=None,custom_width_factor=1):
     """
@@ -85,80 +106,52 @@ def polynomial(x,roots,c):
     polynomial = 1
     for i in range(len(roots)):
         polynomial *= ((x) - roots[i])
-    # fig,axs = subplots(1,1,1)
-    # axs[0].plot(x,polynomial)
     y = polynomial*(np.exp(c*x))
-    # axs[0].plot(x,polynomial)
-    # plt.show()
-    # if(c<1):
-    #     y = polynomial*(1-np.exp(c*x))
-    # if(c>=1):
-    #     y = polynomial*(np.exp(-c*x))
     return y
 def abspolynomial(x,roots,c):
     return np.abs(polynomial(x,roots,c))
-def integrated_function(x,roots,c,normalization_factor=1):
-    return abspolynomial(x,roots,c)/normalization_factor
-def log_polynomial(x,roots,c,normalization_factor=1):
-    polynomial = 1
-    for i in range(len(roots)):
-        polynomial += np.log(abs((x) - roots[i]))
-    # fig,axs = subplots(1,1,1)
-    # axs[0].plot(x,polynomial)
-    y = polynomial+c*x
-    return y
-def curve(roots,ax,line,linewidth,contrast):
+def curve(roots,ax,line,linewidth,contrast,color):
     c_list = np.linspace(-0.1,0.1,10000)
     x = np.linspace(min(roots),max(roots),1000)
 
     equivalent_width = []
     for i in range(len(c_list)):
-        # integrated_area = quad(abspolynomial,min(roots),max(roots),args=(roots,c_list[i]))[0]
-        # equivalent_width.append(integrated_area/max((abspolynomial(x,roots,c_list[i]))))
         normalization_factor = np.max((abspolynomial(x,roots,c_list[i])))
         integrated_area = quad(abspolynomial,min(roots),max(roots),args=(roots,c_list[i]))[0]
-        # print(np.max((abspolynomial(x,roots,c_list[i]))))
-        # print(integrated_area)
         if(np.isfinite(integrated_area)):
             equivalent_width.append(integrated_area/normalization_factor)
         else:
             equivalent_width.append(0)
-    # print(equivalent_width)
-    # c = c_list[np.argmax(equivalent_width)]
+
     c = c_list[np.nanargmax(equivalent_width)]
-    # c = c_list[np.nanargmax(equivalent_width)]/np.max(roots)
-    # print(equivalent_width)
     print("Optimal parameter c:",c)
 
     # Plotting the optimization and the comparrison between the swirls
     fig_optimize,axs = subplots(2,1,1.0,override=True)
     axs[0].plot(c_list,equivalent_width,color="blue",label="Equivalent width function")
     axs[0].vlines(x=c,ymin=np.min(equivalent_width),ymax=np.max(equivalent_width),
-                  color="black",linestyle="--",label=r"Optimal $c=$"+str(np.round(c,6)))
+                  color=color,linestyle="--",label=r"Optimal $c=$"+str(np.round(c,6)))
     axs[0].set_xlabel(r"$c$ parameter")
     axs[0].set_ylabel("Equivalent width")
-    axs[1].plot(x,x*0,color="black")
+    axs[1].plot(x,x*0,color=color)
     y_original = polynomial(x,roots,c=0)/np.max(abspolynomial(x,roots,c=0))*(-1)**(len(roots)+1)
     y_optimized = polynomial(x,roots,c=c)/np.max(abspolynomial(x,roots,c=c))*(-1)**(len(roots)+1)
     axs[1].plot(x,y_original,color="red",label="Original swirls")
-    axs[1].plot(x,y_optimized,color="black",label="Optimized swirls")
+    axs[1].plot(x,y_optimized,color=color,label="Optimized swirls")
 
-    # random_c = np.random.random()/10/4
-    # axs[0].vlines(x=random_c,ymin=np.min(equivalent_width),ymax=np.max(equivalent_width),
-    #               color="purple",linestyle="--",label=r"Random $c=$"+str(np.round(random_c,6)))
-    # axs[1].plot(x,polynomial(x,roots,c=random_c)/np.max(abspolynomial(x,roots,c=random_c))*(-1)**(len(roots)+1),color="purple",label="Random swirls")
     axs[1].set_xlabel("Vertical coordinate")
     axs[1].set_ylabel("Normalized horizontal \n coordinate")
-    axs[1].set_title(str(roots)+"   "+str(roots/np.max(roots)))
+    axs[1].set_title(str(roots)+"   "+str(np.round(roots/np.max(roots),4)))
     fig_optimize.legend()
-    fig_optimize.savefig(current_directory+"/Optimizer.png")
+    # fig_optimize.savefig(current_directory+"/Optimizer.png")
+    list_of_figures.append(fig_optimize)
     plt.close(fig_optimize)
     y = polynomial(x,roots,c)
 
     # Ensure the curve ALWAYS starts to the right
     y = y/max(abs(y))*(-1)**(len(roots)+1)
-    ax.fill_betweenx(x,y*get_svg_size("start"+file_ending)[0]*tel_width+line,y*contrast*get_svg_size("start"+file_ending)[0]*tel_width+line,color="black")
-    ax.plot(y*get_svg_size("start"+file_ending)[0]/2+line,x,c="black",linewidth=linewidth)
+    ax.fill_betweenx(x,y*get_svg_size("start.svg")[0]*tel_width+line,y*contrast*get_svg_size("start.svg")[0]*tel_width+line,color=color)
+    ax.plot(y*get_svg_size("start.svg")[0]/2+line,x,c=color,linewidth=linewidth)
 def separate_string_into_clumps(string):
     """
     Splitting the provided Romanized string into clumps corresponding to valid numh.
@@ -206,8 +199,6 @@ from matplotlib.transforms import Affine2D
 
 def _local_tag(elem):
     return elem.tag.split('}')[-1]
-
-
 def _parse_transform(transform_str):
     """Parse an SVG transform attribute into a 3x3 affine matrix
     (matplotlib convention: [[a,c,e],[b,d,f],[0,0,1]])."""
@@ -231,22 +222,18 @@ def _parse_transform(transform_str):
             m = np.identity(3)
         mat = mat @ m  # compose left-to-right as SVG spec requires
     return mat
-
-
-def _collect_paths(elem, parent_matrix, out):
+def _collect_paths(elem, parent_matrix, out,color):
     """Recursively collect (d_string, fill, matrix) for every <path>."""
     tag = _local_tag(elem)
     matrix = parent_matrix @ _parse_transform(elem.get('transform'))
 
     if tag == 'path' and elem.get('d') is not None:
-        fill = elem.get('fill', 'black')
+        fill = elem.get('fill', color)
         out.append((elem.get('d'), fill, matrix))
 
     for child in elem:
-        _collect_paths(child, matrix, out)
-
-
-def image_svg(imagename, ax, line, height, target_width=None, target_height=None):
+        _collect_paths(child, matrix, out,color)
+def image_svg(imagename, ax, line, height,color, target_width=None, target_height=None):
     tree = ET.parse(current_directory+"/alphabet_vectorized//" + imagename)
     root = tree.getroot()
 
@@ -260,8 +247,7 @@ def image_svg(imagename, ax, line, height, target_width=None, target_height=None
         minx, miny = 0, 0
     svg_w = svg_w
     svg_h = svg_h
-    # print(svg_w/8,svg_h/8)
-    # print("Width:",svg_w/8)
+
     # --- decide final display size ---
     if target_width is None and target_height is None:
         disp_w, disp_h = svg_w, svg_h          # native size
@@ -277,12 +263,10 @@ def image_svg(imagename, ax, line, height, target_width=None, target_height=None
     sx = disp_w / svg_w
     sy = disp_h / svg_h
 
-    horizontal_offset = 7*8 if imagename == "start.svg" else 0
-
     # if disp_w > width:
     #     width = disp_w
 
-    x0 = -disp_w / 2 + horizontal_offset + line
+    x0 = -disp_w / 2 + line
     y0 = height
 
     # placement matrix: viewBox coords -> scaled -> translated into data coords
@@ -293,7 +277,7 @@ def image_svg(imagename, ax, line, height, target_width=None, target_height=None
     ])
 
     paths_data = []
-    _collect_paths(root, np.identity(3), paths_data)
+    _collect_paths(root, np.identity(3), paths_data,color)
 
     for d_str, fill, group_matrix in paths_data:
         mpl_path = parse_path(d_str)
@@ -316,56 +300,80 @@ def get_svg_size(imagename):
     if 'viewBox' in root.attrib:
         __, __, svg_w, svg_h = map(float, root.attrib['viewBox'].split())
     return svg_w,svg_h
-def calculate_window_size(clumps,line_break_height):
+def calculate_window_size(clumps,line_break_height,complex_sentence_structure):
     figsize_x, figsize_y = get_svg_size("start.svg")
-    figsize_x += figsize_x
-    line_height = -34+figsize_y
+    figsize_x += figsize_x # Padding on the sides
+    height = figsize_y
+    figsize_y += figsize_y # Padding on the top and bottom
     print("Start_size:",get_svg_size("start.svg")[0])
+    if(complex_sentence_structure):
+        height += subbranch_height*get_svg_size("_.svg")[1]
+    # Complex sentence structures
+    complex_sentence_indicies = []
+    sentence_start = 0
+    continuing_sentence = False
+    # print(4*get_svg_size("_.svg")[1],get_svg_size("newline3.svg")[1])
     for i in range(len(clumps)):
         # If it is the end of a sentence, add vertical lines, line-break and start new sentence. Reset bars
-        if(clumps[i]=="."):
-            line_height += 3*get_svg_size("_"+file_ending)[1]
-            figsize_y = np.max([figsize_y,line_height])
+        if(clumps[i]=="." or clumps[i]=="!"):
+            height += ending_height*get_svg_size("_.svg")[1] # Ending line
+            if(clumps[i]=="!"):
+                height += get_svg_size("!.svg")[1] # Exclamation mark
+            if(continuing_sentence):
+                complex_sentence_indicies.append(sentence_start)
+                continuing_sentence = False
+            sentence_start = i+1
+            figsize_y = np.max([figsize_y,height])
             if(i!=len(clumps)-1):
                 figsize_x += get_svg_size("start.svg")[0]*padding_factor
-                line_height = -34
-                line_height += get_svg_size("newline3"+file_ending)[1]
+                height = get_svg_size("newline3.svg")[1]
+
+                if(complex_sentence_structure):
+                    height += subbranch_height*get_svg_size("_.svg")[1]
+                    # if(i==0):
+                    #     height += 3*get_svg_size("_.svg")[1]
         
         # If the space between two words in the middle of a sentence, add some spacing and reset bars.
         if(clumps[i]=="_" and clumps[i-1]!="."):
-            line_height += 2*get_svg_size(clumps[i]+file_ending)[1]
+            # If another nuhm can be fitted within the line_break_height
+            if(height+space_height*get_svg_size("_.svg")[1] < line_break_height):
+                # height = image(clumps[i]+".svg",main_axs[0],line,height,space_height)
+                height += space_height*get_svg_size("_.svg")[1]
+            else:
+                height += get_svg_size("newline2.svg")[1]
+                # complex_sentence_indicies.append(sentence_start)
+                figsize_x += get_svg_size("start.svg")[0]*padding_factor
+                figsize_y = np.max([figsize_y,height])
+                height = get_svg_size("newline.svg")[1]
+                if(complex_sentence_structure):
+                    height += get_svg_size("newline4.svg")[1]/2+get_svg_size("newline.svg")[1]/2
+                    height += get_svg_size("_.svg")[1]*(subbranch_height-int(np.round((get_svg_size("newline.svg")[1]+get_svg_size("newline4.svg")[1])/2/get_svg_size("_.svg")[1])))
+                continuing_sentence = True
         
         # If normal nuhms, just add them.
-        if(clumps[i]!="-" and clumps[i]!="." and clumps[i]!="_"):
-            line_height += get_svg_size(clumps[i]+file_ending)[1]
+        if(clumps[i]!="-" and clumps[i]!="." and clumps[i]!="_" and clumps[i]!="!"):
+            height += get_svg_size(clumps[i]+".svg")[1]
 
         # If the line exceeds the specified height limit, insert a line-break and continue on new line.
-        if(line_height+2*get_svg_size("_"+file_ending)[1] > line_break_height and clumps[i]=="_"):
-            line_height += get_svg_size("newline2"+file_ending)[1]
-            figsize_x += get_svg_size("start.svg")[0]*padding_factor
-            figsize_y = np.max([figsize_y,line_height])
-            line_height = -34
-            # image("horizontal_line"+file_ending,main_axs[0])
-            line_height += get_svg_size("newline"+file_ending)[1]
-        # print(i,clumps[i],figsize_x)
-    return figsize_x,figsize_y
+        # if(height+space_height*get_svg_size("_.svg")[1] > line_break_height and clumps[i]=="_" and clumps[i-1]!="."):
+        #     height += get_svg_size("newline2.svg")[1]
+        #     # complex_sentence_indicies.append(sentence_start)
+        #     figsize_x += get_svg_size("start.svg")[0]*padding_factor
+        #     figsize_y = np.max([figsize_y,height])
+        #     height = get_svg_size("newline.svg")[1]
+        #     if(complex_sentence_structure):
+        #         height += get_svg_size("start.svg")[1]+get_svg_size("newline4.svg")[1]/2-get_svg_size("newline.svg")[1]/2
+        #     continuing_sentence = True
+        # print(i,clumps[i],height,figsize_x)
+    return figsize_x,figsize_y,complex_sentence_indicies
 
-def image(imagename,ax,line,height):
+def image(imagename,ax,line,height,color,repeat=1):
     '''
     The function displays the numh corresponding to the romanized text clump.
     '''
-    if(".svg" in imagename):
-        return image_svg(imagename,ax,line,height)
-    else:
-        img = mpimg.imread(current_directory+"/alphabet//"+imagename)
-        numh_height,nuhm_width,__ = np.shape(img)
-
-        horizontal_offset = 0
-        if(imagename=="start.png"):
-            horizontal_offset = 7
-        ax.imshow(img,extent=[-nuhm_width/2+horizontal_offset+line,nuhm_width/2+horizontal_offset+line,height+numh_height,height])
-        height += numh_height
-        return height
+    for i in range(repeat):
+        height = image_svg(imagename,ax,line,height,color)
+    return height
 
 
 # string = "Stal nameStonn le-matya k'stonn ik tal-tor svi'mazhiv po'ta zeshal aushfa mal-nef-hinek t'sa-veh. Ish-wak svi-aru."
@@ -397,25 +405,21 @@ def image(imagename,ax,line,height):
 # plt.title("\""+string+"\"\n I have and always shall be your friend.")
 # plt.title("\""+string+"\"\n "+translate)
 
-def generate_vulcan_calligraphy(string,line_break_height,contrast):
+def generate_vulcan_calligraphy(string,line_break_height,contrast,complex_sentence_structure,dark_mode):
     line_break_height = line_break_height*4 # Pixel to coordinate conversion
-    if(string[-1] != "."):
+    if(string[-1] != "." and string[-1] != "!"):
         string += "."
     string = string.replace(" ","_")
     print(string)
     clumps = separate_string_into_clumps(string.lower())
     print(clumps)
 
-    figsize_x = 16
-    figsize_y = 16
-    if file_ending == ".svg":
-        figsize_x,figsize_y = calculate_window_size(clumps,line_break_height)
-    figsize_x = figsize_x
+    figsize_x = 1
+    figsize_y = 1
+    complex_sentence_indicies = []
+    figsize_x,figsize_y, complex_sentence_indicies = calculate_window_size(clumps,line_break_height,complex_sentence_structure)
     # linewidth = 1.5*np.sqrt((1+np.max([1,figsize_x/figsize_y,figsize_y/figsize_x])**2)/2)
     # linewidth = 2.5*np.sqrt(2)/np.sqrt(1+np.max([1,figsize_x/figsize_y,figsize_y/figsize_x])**2)
-    linewidth = 1.5
-    print("Linewidth:",linewidth)
-    print("Figsize:",figsize_x,figsize_y)
 
     # TODO Look at the size parameters here
     # if(figsize_y>figsize_x):
@@ -423,86 +427,163 @@ def generate_vulcan_calligraphy(string,line_break_height,contrast):
     # if(figsize_y<figsize_x):
     #     main_fig, main_axs = plt.subplots(1, 1, figsize=(16*figsize_x/figsize_y, 16),layout="constrained")
 
-    
-    if figsize_y > figsize_x:
-        w, h = 16, 16 * figsize_y / figsize_x
-    else:
-        w, h = 16 * figsize_x / figsize_y, 16
+    # np.max[16,figsize_y / figsize_x*16]
+    # np.max[16,figsize_x / figsize_y*16]
+    # if figsize_y > figsize_x:
+    #     w, h = 16, 16 * figsize_y / figsize_x
+    # else:
+    #     w, h = 16 * figsize_x / figsize_y, 16
 
-    # Create the figure blank
-    main_fig = plt.figure(figsize=(w, h))
+    # Create the figure
+    main_fig = plt.figure(figsize=(np.max([resolution,resolution*figsize_x/figsize_y]), np.max([resolution,resolution*figsize_y/figsize_x])))
+    linewidth = 1.5*resolution/16
+    print("Linewidth:",linewidth)
+    print("Figsize:",figsize_x,figsize_y)
+
+    if(dark_mode):
+        color = "white"
+        plt.style.use('dark_background')
+    else:
+        color = "black"
+
 
     # Add a single axes that takes up 100% of the width and height [left, bottom, width, height]
     main_axs = main_fig.add_axes([0, 0, 1, 1])
     
-    plt.tight_layout()
+    # plt.tight_layout()
     main_axs = [main_axs]
     if(not debug):
         main_axs[0].set_axis_off()
 
-    width = get_svg_size("start"+file_ending)[0]
-    height = -34 # Required for the patam. Approximately half of the height of the numh.
+    width = get_svg_size("start.svg")[0]
+    height = 0 # Required for the patam. Approximately half of the height of the numh.
     max_height = height
 
     line = 0 # The position of the active spine
-    # image("start.png",main_axs[0])
-    # image("vect.svg",main_axs[0],target_height=86,target_width=77)
-    height = image("start"+file_ending,main_axs[0],line,height)
-    bars = [height]
+    subbar = 0
+    
+    height = image("start.svg",main_axs[0],line,height,color)
+    if(complex_sentence_structure and figsize_x>2*width):
+        if(0 in complex_sentence_indicies):
+            height = image("newline4.svg",main_axs[0],line,height,color)
+            height = image("_.svg",main_axs[0],line,height,color,
+                           subbranch_height-int(np.round(get_svg_size("newline4.svg")[1]/get_svg_size("_.svg")[1])))
+            # height = image("_.svg",main_axs[0],line,height)
+        else:
+            height = image("_.svg",main_axs[0],line,height,color,subbranch_height)
+    if(centered_on_nuhm):
+        bars = [height+get_svg_size(clumps[1]+".svg")[1]/2]
+    else:
+        bars = [height]
     for i in range(len(clumps)):
         # If it is the end of a sentence, add vertical lines, line-break and start new sentence. Reset bars
-        if(clumps[i]=="."):
+        if(clumps[i]=="." or clumps[i]=="!"):
             if(len(bars)>1):
-                bars.append(height)
-                curve(bars,main_axs[0],line,linewidth,contrast)
-            height = image("_"+file_ending,main_axs[0],line,height)
-            height = image("_"+file_ending,main_axs[0],line,height)
-            height = image("_"+file_ending,main_axs[0],line,height)
+                if(centered_on_nuhm):
+                    bars.append(height-get_svg_size(clumps[i-1]+".svg")[1]/2)
+                else:
+                    bars.append(height)
+                curve(bars,main_axs[0],line,linewidth,contrast,color)
+            
+            if(complex_sentence_structure):
+                subbar_position = get_svg_size("start.svg")[1]+get_svg_size("newline4.svg")[1]/2
+                if(line != subbar):
+                    main_axs[0].plot([subbar+get_svg_size("newline4.svg")[0]/2,line+width/2],
+                                     [subbar_position,subbar_position],color=color,linewidth=linewidth*1.5)
+            height = image("_.svg",main_axs[0],line,height,color,ending_height)
+            if(clumps[i]=="!"):
+                height = image("!.svg",main_axs[0],line,height,color)
             max_height = np.max([max_height,height])
             if(i!=len(clumps)-1):
                 line += width*padding_factor
-                height = -34
+                height = 0
                 # image("horizontal_line"+file_ending,main_axs[0])
-                height = image("newline3"+file_ending,main_axs[0],line,height)
-                bars = [height]
+                height = image("newline3.svg",main_axs[0],line,height,color)
+                subbar = line
+                if(complex_sentence_structure):
+                    if(i+1 in complex_sentence_indicies):
+                        height = image("newline4.svg",main_axs[0],line,height,color)
+                        height = image("_.svg",main_axs[0],line,height,color,
+                                       subbranch_height-int(np.round(get_svg_size("newline4.svg")[1]/get_svg_size("_.svg")[1])))
+                        # height = image("_.svg",main_axs[0],line,height)
+                    else:
+                        height = image("_.svg",main_axs[0],line,height,color,subbranch_height)
+                if(centered_on_nuhm):
+                    bars = [height+get_svg_size(clumps[i+1]+".svg")[1]/2]
+                else:
+                    bars = [height]
         
         # If the space between two words in the middle of a sentence, add some spacing and reset bars.
         if(clumps[i]=="_" and clumps[i-1]!="."):
             if(len(bars)>1):
-                bars.append(height)
+                if(centered_on_nuhm):
+                    bars.append(height-get_svg_size(clumps[i-1]+".svg")[1]/2)
+                else:
+                    bars.append(height)
                 print(bars)
-                curve(bars,main_axs[0],line,linewidth,contrast)
-            if(height+2*get_svg_size("_"+file_ending)[1] < line_break_height):
-                height = image(clumps[i]+file_ending,main_axs[0],line,height)
-                height = image(clumps[i]+file_ending,main_axs[0],line,height)
-            bars = [height]
+                curve(bars,main_axs[0],line,linewidth,contrast,color)
+            # If another nuhm can be fitted within the line_break_height
+            if(height+space_height*get_svg_size("_.svg")[1] < line_break_height):
+                height = image(clumps[i]+".svg",main_axs[0],line,height,color,space_height)
+            else:
+                height = image("newline2.svg",main_axs[0],line,height,color)
+                max_height = np.max([max_height,height])
+                line += width*padding_factor
+                height = 0
+                if(complex_sentence_structure):
+                    height += get_svg_size("newline4.svg")[1]/2+get_svg_size("newline.svg")[1]/2
+                # image("horizontal_line"+file_ending,main_axs[0])
+                height = image("newline.svg",main_axs[0],line,height,color)
+                if(complex_sentence_structure):
+                    height = image("_.svg",main_axs[0],line,height,color,
+                                subbranch_height-int(np.round((get_svg_size("newline.svg")[1]+get_svg_size("newline4.svg")[1])/2/get_svg_size("_.svg")[1])))
+                # if(centered_on_nuhm):
+                #     bars = [height+get_svg_size(clumps[i+1]+".svg")[1]/2]
+                # else:
+                #     bars = [height]
+            if(centered_on_nuhm):
+                bars = [height+get_svg_size(clumps[i+1]+".svg")[1]/2]
+            else:
+                bars = [height]
         
         # If there are bars, do not add a nuhm, just prepare for the swirls.
         if(clumps[i]=="-"):
             bars.append(height)
         
         # If normal nuhms, just add them.
-        if(clumps[i]!="-" and clumps[i]!="." and clumps[i]!="_"):
-            height = image(clumps[i]+file_ending,main_axs[0],line,height)
+        if(clumps[i]!="-" and clumps[i]!="." and clumps[i]!="_" and clumps[i]!="!"):
+            height = image(clumps[i]+".svg",main_axs[0],line,height,color)
+            if(clumps[i]=="'" and len(bars)==1):
+                if(centered_on_nuhm):
+                    bars = [height+get_svg_size(clumps[i+1]+".svg")[1]/2]
+                else:
+                    bars = [height]
 
         # If the line exceeds the specified height limit, insert a line-break and continue on new line.
-        if(height+2*get_svg_size("_"+file_ending)[1] > line_break_height and clumps[i]=="_"):
-            height = image("newline2"+file_ending,main_axs[0],line,height)
-            max_height = np.max([max_height,height])
-            line += width*padding_factor
-            height = -34
-            # image("horizontal_line"+file_ending,main_axs[0])
-            height = image("newline"+file_ending,main_axs[0],line,height)
-            bars=[height]
-        # print(i,clumps[i],line+2*width)
+        # if(height+space_height*get_svg_size("_.svg")[1] > line_break_height and clumps[i]=="_" and clumps[i-1]!="."):
+        #     height = image("newline2.svg",main_axs[0],line,height)
+        #     max_height = np.max([max_height,height])
+        #     line += width*padding_factor
+        #     height = 0
+        #     if(complex_sentence_structure):
+        #         height += get_svg_size("start.svg")[1]+get_svg_size("newline4.svg")[1]/2-get_svg_size("newline.svg")[1]/2
+        #     # image("horizontal_line"+file_ending,main_axs[0])
+        #     height = image("newline.svg",main_axs[0],line,height)
+        #     if(centered_on_nuhm):
+        #         bars = [height+get_svg_size(clumps[i+1]+".svg")[1]/2]
+        #     else:
+        #         bars = [height]
+        # print(i,clumps[i],height,figsize_x)
+    
+    save_images_in_pdf(current_directory+"/Optimizer.pdf",list_of_figures)
+
     # The horizontal spine
-    main_axs[0].plot([0,width/2+line],[240,240],color="black",linewidth=linewidth*1.5)
+    main_axs[0].plot([0,width/2+line],[get_svg_size("start.svg")[1]/2,get_svg_size("start.svg")[1]/2],color=color,linewidth=linewidth*1.5)
     main_axs[0].set_xlim(-width,width+line)
-    print(width,line,figsize_x,figsize_y)
-    main_axs[0].set_ylim(max_height,-34)
+    main_axs[0].set_ylim(max_height+width/2,-width/2)
     if(debug):
         main_axs[0].hlines(y=line_break_height,xmin=-width,xmax=width+line,color="red",linestyle="--")
-    main_fig.tight_layout()
+    # main_fig.tight_layout()
     main_fig.savefig(current_directory+"/Generated text.png")
 
 # generate_vulcan_calligraphy(string)

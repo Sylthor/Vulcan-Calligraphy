@@ -1,6 +1,6 @@
-# Vulcan Calligraphy - Gotavlu-zukitan
+# Vulcan Calligraphy - Vanu-Tanaf-Kitaun
 
-![alt text](demo_images/Generated%20text_demo.png "Title")
+![alt text](demo_images/Generated%20text_complex_dark_demo.png "Title")
 
 >"No learning is ever wasted. Wide experience increases wisdom, provided the experience is not sought purely for the stimulation of sensation. Our senses can deceive us and the knowledge they bring us is limited. We create machines to extend their limits, but these machines can also be deceived. To know the ultimate truth, we must transcend knowledge, go beyond surfaces that our senses detect, to understand without knowing. By not seeking, we find. For the Vulcan species to survive, this is the discipline we must master." - Surak, [Kir'Shara, First Analects Part 2: The thread of knowledge](https://kirshara.wordpress.com/2020/01/05/part-two-the-thread-of-knowledge/).
 
@@ -49,12 +49,13 @@ To use the script, open the **playground.py** and add a variable called *string*
 1) Always add space after periods.
 2) Always add 'name' directly before a name. Example: "nameStonn" for the name "Stonn".
 3) Only use symbols that have defined *nuhm* from [korsaya.org](https://korsaya.org). Symbols such as quotation marks, question marks, or commas have not been defined.
+4) For "dot" as in "korsaya.com", use "@dot". For exclamation mark, use "!".
 
 ## How it works
 ### Displaying the *nuhm*
 Each *nuhm* is stored as a scalable vector graphics (.svg) file in the *alphabet_vectorized* dictionary. The script takes an input string and tries to fit the *nuhm* corresponding to the largest number of romanized letters first, and then works downwards from there. So, for example, "nameStonn" will be divided as name-st-o-nn.
 
-When running the script, it will produce two files. The file named *Optimizer.png* will include information about the generation of the *tel*, which is described in a later section. It gets updated for every processed *tel*. The *Generated text.png* contains the desired finished generated calligraphy.
+When running the script, it will produce two files. The file named *Optimizer.pdf* will include information about the generation of the *tel*, which is described in a later section. The *Generated text.png* contains the desired finished generated calligraphy.
 
 ### Generating the *tel*
 The generation of *tel* was a really big challenge, but a fun one. I decided to approach the challenge from a mathematical perspective, and I will hereby describe the process used.
@@ -91,7 +92,7 @@ There are a few decisions that I have taken in this script in order to create a 
 
 ## Potential future developments
 * Advice appretiated: Handle commas, colons, and quotation marks.
-* Adding sentance/parahraph separation like the one found on [korsaya.org](http://korsaya.org/2010/12/hello-world/).
+<!-- * Adding sentance/parahraph separation like the one found on [korsaya.org](http://korsaya.org/2010/12/hello-world/). -->
 * Adding an option to add a custom patam.
 * Replace the line-break height with a hard maximal height limit.
 * Change resolution.
