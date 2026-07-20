@@ -111,7 +111,7 @@ def polynomial(x,roots,c):
 def abspolynomial(x,roots,c):
     return np.abs(polynomial(x,roots,c))
 def curve(roots,ax,line,linewidth,contrast,color):
-    c_list = np.linspace(-0.1,0.1,10000)
+    c_list = np.linspace(-0.05,0.05,10000)
     x = np.linspace(min(roots),max(roots),1000)
 
     equivalent_width = []
@@ -129,7 +129,7 @@ def curve(roots,ax,line,linewidth,contrast,color):
     # Plotting the optimization and the comparrison between the swirls
     fig_optimize,axs = subplots(2,1,1.0,override=True)
     axs[0].plot(c_list,equivalent_width,color="blue",label="Equivalent width function")
-    axs[0].vlines(x=c,ymin=np.min(equivalent_width),ymax=np.max(equivalent_width),
+    axs[0].vlines(x=c,ymin=np.nanmin(equivalent_width),ymax=np.nanmax(equivalent_width),
                   color=color,linestyle="--",label=r"Optimal $c=$"+str(np.round(c,6)))
     axs[0].set_xlabel(r"$c$ parameter")
     axs[0].set_ylabel("Equivalent width")
@@ -349,7 +349,8 @@ def calculate_window_size(clumps,line_break_height,complex_sentence_structure):
                     height += get_svg_size("newline4.svg")[1]/2+get_svg_size("newline.svg")[1]/2
                     height += get_svg_size("_.svg")[1]*(subbranch_height-int(np.round((get_svg_size("newline.svg")[1]+get_svg_size("newline4.svg")[1])/2/get_svg_size("_.svg")[1])))
                 continuing_sentence = True
-        
+        if(clumps[i]==","):
+            height += space_height*get_svg_size("_.svg",)[1]
         # If normal nuhms, just add them.
         if(clumps[i]!="-" and clumps[i]!="." and clumps[i]!="_" and clumps[i]!="!"):
             height += get_svg_size(clumps[i]+".svg")[1]
@@ -550,6 +551,9 @@ def generate_vulcan_calligraphy(string,line_break_height,contrast,complex_senten
         if(clumps[i]=="-"):
             bars.append(height)
         
+        if(clumps[i]==","):
+            height = image("_.svg",main_axs[0],line,height,color,space_height)
+
         # If normal nuhms, just add them.
         if(clumps[i]!="-" and clumps[i]!="." and clumps[i]!="_" and clumps[i]!="!"):
             height = image(clumps[i]+".svg",main_axs[0],line,height,color)

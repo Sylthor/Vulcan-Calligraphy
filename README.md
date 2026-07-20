@@ -48,7 +48,7 @@ If everything ran correctly, you should see two new files, "Optimizer.png" and "
 To use the script, open the **playground.py** and add a variable called *string*, with the vulcan text you want to display. There are three rules for formatting the text that have to be followed to produce an accurate rendering.
 1) Always add space after periods.
 2) Always add 'name' directly before a name. Example: "nameStonn" for the name "Stonn".
-3) Only use symbols that have defined *nuhm* from [korsaya.org](https://korsaya.org). Symbols such as quotation marks, question marks, or commas have not been defined.
+3) Only use symbols that have defined *nuhm* from [korsaya.org](https://korsaya.org). Symbols such as quotation marks, colons or commas have not been defined.
 4) For "dot" as in "korsaya.com", use "@dot". For exclamation mark, use "!".
 
 ## How it works
