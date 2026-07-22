@@ -57,6 +57,14 @@ Each *nuhm* is stored as a scalable vector graphics (.svg) file in the *alphabet
 
 When running the script, it will produce two files. The file named *Optimizer.pdf* will include information about the generation of the *tel*, which is described in a later section. The *Generated text.png* contains the desired finished generated calligraphy.
 
+### Fine-tuning
+The script has a set of parameters to fine-tune the output to your desired specifications. These are:
+1) **line_break_height**: The maximum number of pixels per *plat*. If exceeded, the word will be moved to the next line. Typical nuhm height is ~360 pixels.
+2) **contrast**: Affects the thin-to-thick-to-thin calligraphy parts of swirls. Set to 1 for no effect.
+complex_sentence_structure = True # Whether to separate sentences into sub-branches.
+3) **dark_mode**: Whether to have black background and white text, or not.
+4) **centered_on_nuhm**: Whether to let the tel start and end at the approximate center of the nuhm.
+
 ### Generating the *tel*
 The generation of *tel* was a really big challenge, but a fun one. I decided to approach the challenge from a mathematical perspective, and I will hereby describe the process used.
 
@@ -88,11 +96,10 @@ In the end, the optimized *tel* is multiplied by $(-1)^{n+1}$, which ensures it 
 ## Artistic decisions
 There are a few decisions that I have taken in this script in order to create a general generation structure. I will list all of the decisions here, and they will most likely not change in the future due to practical limitations.
 * **Syllable-independent *nuhm* grouping**: On [korsaya.org](https://korsaya.org), it is stated that the *nuhm* should be grouped along syllables. For example, *kastra* should be displayed as k-a-s|tr-a, while *strachau* should be displayed as str-a|ch-au, even if both words contain "str". I do not know how to implement this yet, so the script tries to fit larger *nuhm* first before shorter. So the words are displayed as k-a-str-a and str-a-ch-au.
-* **Rules for *tel***: On [korsaya.org](https://korsaya.org), there are several unique ways to draw the *tel*. They are listed from (1) to (6). My *tel* are all following one consistent structure, which is closest to the *tel* indicated by (1), but with some minor differences. One of my *tel* always starts at the top of the *nuhm*, going to the right at first, then crosses the *plat* where the hyphens are in romanized text, and then finally ends at the end of the final *nuhm*.
+* **Rules for *tel***: On [korsaya.org](https://korsaya.org), there are several unique ways to draw the *tel*. They are listed from (1) to (6). My *tel* are all following one consistent structure, which is closest to the *tel* indicated by (1), but with some minor differences. My *tel* by default always starts at the top of the *nuhm*, going to the right at first, then crosses the *plat* where the hyphens are in romanized text, and then finally ends at the end of the final *nuhm*. The *tel* can start and end at the center by setting **centered_on_nuhm = True**.
 
 ## Potential future developments
 * Advice appretiated: Handle commas, colons, and quotation marks.
 <!-- * Adding sentance/parahraph separation like the one found on [korsaya.org](http://korsaya.org/2010/12/hello-world/). -->
 * Adding an option to add a custom patam.
-* Replace the line-break height with a hard maximal height limit.
 * Change resolution.
