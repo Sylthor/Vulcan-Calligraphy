@@ -340,13 +340,13 @@ def calculate_window_size(clumps,line_break_height,complex_sentence_structure):
         space = (clumps[i]=="_" and clumps[i-1]!=".")
         # print(clumps[i],"Height",height)
         if(end_of_sentence or (overflow_space and space) or (overflow_end and end_of_sentence)):
-            print("Z",clumps[i],height,line_break_height)
+            # print("Z",clumps[i],height,line_break_height)
             # print(height+ending_height*get_svg_size("_.svg")[1])
             
             # Case 1: Overflow.
             if(overflow_end and end_of_sentence):
-                print("Overflow (period)",height,"->",height-(carry_over_height+ending_height*get_svg_size("_.svg")[1]-get_svg_size("newline2.svg")[1]),
-                      "("+str(carry_over_height)+")")
+                # print("Overflow (period)",height,"->",height-(carry_over_height+ending_height*get_svg_size("_.svg")[1]-get_svg_size("newline2.svg")[1]),
+                #       "("+str(carry_over_height)+")")
                 force_line_breaks.append(word_start)
                 complex_sentence_indicies.append(sentence_start)
                 figsize_x += get_svg_size("start.svg")[0]*padding_factor
@@ -358,8 +358,8 @@ def calculate_window_size(clumps,line_break_height,complex_sentence_structure):
                 if(word_start in force_line_breaks):
                     height += carry_over_height
             if(overflow_space and space and word_start != 0):
-                print("Overflow (space)",height,"->",height-(carry_over_height+0*get_svg_size("_.svg")[1]-get_svg_size("newline2.svg")[1])
-                      ,"("+str(carry_over_height)+")")
+                # print("Overflow (space)",height,"->",height-(carry_over_height+0*get_svg_size("_.svg")[1]-get_svg_size("newline2.svg")[1])
+                #       ,"("+str(carry_over_height)+")")
                 force_line_breaks.append(word_start)
                 complex_sentence_indicies.append(sentence_start)
                 figsize_x += get_svg_size("start.svg")[0]*padding_factor
@@ -373,9 +373,8 @@ def calculate_window_size(clumps,line_break_height,complex_sentence_structure):
                 if(word_start in force_line_breaks):
                     height += carry_over_height
             # Case 2: Period.
-            # if(end_of_sentence and i!=len(clumps)-1 and not ((overflow_space and space) or (overflow_end and end_of_sentence))):
             if(end_of_sentence):
-                print("Period")
+                # print("Period")
                 height += ending_height*get_svg_size("_.svg")[1]
                 if(clumps[i]=="!"):
                     height += get_svg_size("!.svg")[1]
@@ -389,114 +388,21 @@ def calculate_window_size(clumps,line_break_height,complex_sentence_structure):
                         height += carry_over_height
 
         if(clumps[i]=="." or clumps[i]=="!"):
-            # if(word_start in force_line_breaks):
-            #     height = carry_over_height
-            #     if(i==len(clumps)-1):
-            #         # figsize_x += get_svg_size("start.svg")[0]*padding_factor
-            #         # print("New x")
-            #         height += get_svg_size("start.svg")[1]
-            #         if(complex_sentence_structure):
-            #             height += subbranch_height*get_svg_size("_.svg")[1]
-            # if(not skip_end):
-            #     height += ending_height*get_svg_size("_.svg")[1]
-            # if(clumps[i]=="!"):
-            #     height += get_svg_size("!.svg")[1]
             if(continuing_sentence):
                 complex_sentence_indicies.append(sentence_start)
                 continuing_sentence = False
             sentence_start = i+1
-            # figsize_y = np.max([figsize_y,height])
             if(i!=len(clumps)-1):
-                # height = 0 # Reset height for new sentence
-                # height += get_svg_size("newline3.svg")[1]
-                # if(complex_sentence_structure):
-                #     # if(i+1 in complex_sentence_indicies):
-                #     #     height += get_svg_size("newline4.svg")[1]
-                #     #     b = subbranch_height-int(np.round(get_svg_size("newline4.svg")[1]/get_svg_size("_.svg")[1]))
-                #     #     height += b*get_svg_size("_.svg")[1]
-                #     # else:
-                #     height += subbranch_height*get_svg_size("_.svg")[1]
                 if(clumps[i+1]=="_"):
                     carry_over_height = 0
                     word_start = i+1
-        # If it is the end of a sentence, add vertical lines, line-break and start new sentence. Reset bars
-        # if(clumps[i]=="." or clumps[i]=="!"):
-        #     height += ending_height*get_svg_size("_.svg")[1] # Ending line
-        #     if(clumps[i]=="!"):
-        #         height += get_svg_size("!.svg")[1] # Exclamation mark
-        #     if(continuing_sentence):
-        #         complex_sentence_indicies.append(sentence_start)
-        #         continuing_sentence = False
-        #     sentence_start = i+1
-        #     if(word_start in force_line_breaks):
-        #         height += carry_over_height
-        #     figsize_y = np.max([figsize_y,height]) # Update figure y-size
-        #     if(i!=len(clumps)-1):
-        #         figsize_x += get_svg_size("start.svg")[0]*padding_factor
-        #         height = get_svg_size("newline3.svg")[1]
-
-        #         if(complex_sentence_structure):
-        #             height += subbranch_height*get_svg_size("_.svg")[1]
-        #         if(clumps[i+1]=="_"):
-        #             carry_over_height = 0
-        #             word_start = i+1
-        
         if(clumps[i]=="_" and clumps[i-1]!="."):
-            # if(word_start in force_line_breaks):
-            #     print("Line break at space.")
-            # If another nuhm can be fitted within the line_break_height
-            # height += space_height*get_svg_size("_.svg")[1]
             if(skip_space):
                 continuing_sentence = True
             else:
                 height += space_height*get_svg_size("_.svg")[1]
-            # if(height+space_height*get_svg_size("_.svg")[1] > line_break_height):
-            #     continuing_sentence = True
-            # # else:
-            # height += space_height*get_svg_size("_.svg")[1]
             carry_over_height = 0
             word_start = i+1
-            # if(height+space_height*get_svg_size("_.svg")[1] < line_break_height and
-            #     word_start not in force_line_breaks):
-            #     pass
-            #     # height += space_height*get_svg_size("_.svg")[1]
-            # else:
-            #     # height += get_svg_size("newline2.svg")[1] # Arrow nuhm
-            #     # figsize_y = np.max([figsize_y,height]) # Update maximal height
-            #     # figsize_x += get_svg_size("start.svg")[0]*padding_factor # Add new column
-            #     # height = 0 # Reset height
-
-            #     # height += get_svg_size("newline.svg")[1]
-            #     # if(complex_sentence_structure):
-            #     #     height += get_svg_size("newline4.svg")[1]/2+get_svg_size("newline.svg")[1]/2
-            #     #     a = subbranch_height-int(np.round((get_svg_size("newline.svg")[1]+get_svg_size("newline4.svg")[1])/2/get_svg_size("_.svg")[1]))
-            #     #     height += a*get_svg_size("_.svg")[1]
-            #     continuing_sentence = True
-                # if(word_start in force_line_breaks):
-                #     height += carry_over_height
-                #     figsize_y = np.max([figsize_y,height])
-
-        # # If the space between two words in the middle of a sentence, add some spacing and reset bars.
-        # if((clumps[i]=="_" and clumps[i-1]!=".") or word_start in force_line_breaks):
-        #     # If another nuhm can be fitted within the line_break_height
-        #     if(height+space_height*get_svg_size("_.svg")[1] < line_break_height and word_start not in force_line_breaks):
-        #         height += space_height*get_svg_size("_.svg")[1]
-        #     else:
-        #         height += get_svg_size("newline2.svg")[1]
-        #         figsize_x += get_svg_size("start.svg")[0]*padding_factor
-        #         figsize_y = np.max([figsize_y,height])
-        #         height = get_svg_size("newline.svg")[1]
-        #         if(complex_sentence_structure):
-        #             height += get_svg_size("newline4.svg")[1]/2+get_svg_size("newline.svg")[1]/2
-        #             a = subbranch_height-int(np.round((get_svg_size("newline.svg")[1]+get_svg_size("newline4.svg")[1])/2/get_svg_size("_.svg")[1]))
-        #             height += get_svg_size("_.svg")[1]*a
-        #         continuing_sentence = True
-        #         if(word_start in force_line_breaks):
-        #             print(i,"Carry over finish",height)
-        #             height += carry_over_height
-        #     carry_over_height = 0
-        #     word_start = i+1
-        # If a comma
         if(clumps[i]==","):
             height += comma(None,None,None,None,pre_render=True)
             carry_over_height += comma(None,None,None,None,pre_render=True)
@@ -505,7 +411,7 @@ def calculate_window_size(clumps,line_break_height,complex_sentence_structure):
             height += get_svg_size(clumps[i]+".svg")[1]
             carry_over_height += get_svg_size(clumps[i]+".svg")[1]
         # print(i,clumps[i],get_svg_size(clumps[i]+".svg")[1],height,figsize_y,carry_over_height,line_break_height)
-        print(i,clumps[i],get_svg_size(clumps[i]+".svg")[1],word_start,height,figsize_y,carry_over_height,line_break_height)
+        # print(i,clumps[i],get_svg_size(clumps[i]+".svg")[1],word_start,height,figsize_y,carry_over_height,line_break_height)
     print("Complex sentence:",complex_sentence_indicies)
     print("Line breaks:",force_line_breaks)
     # print(figsize_x/get_svg_size("start.svg")[0])
