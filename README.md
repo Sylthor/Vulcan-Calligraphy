@@ -48,7 +48,7 @@ If everything ran correctly, you should see two new files, "Optimizer.png" and "
 To use the script, open the **playground.py** and add a variable called *string*, with the vulcan text you want to display. There are three rules for formatting the text that have to be followed to produce an accurate rendering.
 1) Always add space after periods.
 2) Always add 'name' directly before a name. Example: "nameStonn" for the name "Stonn".
-3) Only use symbols that have defined *nuhm* from [korsaya.org](https://korsaya.org). Symbols such as quotation marks, colons or commas have not been defined.
+3) Only use symbols that have defined *nuhm* from [korsaya.org](https://korsaya.org). Symbols such as quotation marks, or colons have not been defined.
 4) For "dot" as in "korsaya.com", use "@dot". For exclamation mark, use "!".
 
 ## How it works
@@ -62,8 +62,9 @@ The script has a set of parameters to fine-tune the output to your desired speci
 1) **line_break_height**: The maximum number of pixels per *plat*. If exceeded, the word will be moved to the next line. Typical nuhm height is ~360 pixels.
 2) **contrast**: Affects the thin-to-thick-to-thin calligraphy parts of swirls. Set to 1 for no effect.
 complex_sentence_structure = True # Whether to separate sentences into sub-branches.
-3) **dark_mode**: Whether to have black background and white text, or not.
-4) **centered_on_nuhm**: Whether to let the tel start and end at the approximate center of the nuhm.
+3) **complex_sentence_structure**: Whether to split sentences into individual subbranches or not.
+4) **dark_mode**: Whether to have black background and white text, or not.
+5) **centered_on_nuhm**: Whether to let the tel start and end at the approximate center of the nuhm.
 
 ### Generating the *tel*
 The generation of *tel* was a really big challenge, but a fun one. I decided to approach the challenge from a mathematical perspective, and I will hereby describe the process used.
@@ -97,6 +98,7 @@ In the end, the optimized *tel* is multiplied by $(-1)^{n+1}$, which ensures it 
 There are a few decisions that I have taken in this script in order to create a general generation structure. I will list all of the decisions here, and they will most likely not change in the future due to practical limitations.
 * **Syllable-independent *nuhm* grouping**: On [korsaya.org](https://korsaya.org), it is stated that the *nuhm* should be grouped along syllables. For example, *kastra* should be displayed as k-a-s|tr-a, while *strachau* should be displayed as str-a|ch-au, even if both words contain "str". I do not know how to implement this yet, so the script tries to fit larger *nuhm* first before shorter. So the words are displayed as k-a-str-a and str-a-ch-au.
 * **Rules for *tel***: On [korsaya.org](https://korsaya.org), there are several unique ways to draw the *tel*. They are listed from (1) to (6). My *tel* are all following one consistent structure, which is closest to the *tel* indicated by (1), but with some minor differences. My *tel* by default always starts at the top of the *nuhm*, going to the right at first, then crosses the *plat* where the hyphens are in romanized text, and then finally ends at the end of the final *nuhm*. The *tel* can start and end at the center by setting **centered_on_nuhm = True**.
+* **Custom comma:** Since the comma has not been officially confirmed, I have added a custom *nuhm* for a comma. For now, it adds another space before it, and is shaped almost like the **v** *nuhm*, but is smaller and breaks the *plat*.
 
 ## Potential future developments
 * Advice appretiated: Handle commas, colons, and quotation marks.
