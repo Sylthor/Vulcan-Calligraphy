@@ -25,7 +25,7 @@ space_height = 3 # Min=0
 ending_height = 5 # Min=0
 
 # Other specifications
-resolution = 32 # In figsize. Default is 16, so the scaling is res/16.
+resolution = 16 # In figsize. Default is 16, so the scaling is res/16.
 padding_factor = 1.1 # In (start-)widths to add space on the side.
 tel_width = 0.5 # In widths, for maximal outswing.
 
@@ -104,7 +104,7 @@ def polynomial(x,roots,c):
 def abspolynomial(x,roots,c):
     return np.abs(polynomial(x,roots,c))
 def curve(roots,ax,line,linewidth,contrast,color):
-    c_list = np.linspace(-0.05,0.05,10000)
+    c_list = np.linspace(-0.01,0.01,10000)
     x = np.linspace(min(roots),max(roots),1000)
 
     equivalent_width = []
@@ -299,7 +299,7 @@ def comma(main_axs,line,height,color,pre_render=True):
         height = image(",.svg",main_axs,line,height,color)
         return height
 
-def calculate_window_size(clumps,line_break_height,complex_sentence_structure):
+def calculate_window_size(clumps,line_break_height,complex_sentence_structure,debug):
     figsize_x, figsize_y = get_svg_size("start.svg")
     # figsize_x += figsize_x # Padding on the sides
     height = figsize_y
@@ -340,13 +340,15 @@ def calculate_window_size(clumps,line_break_height,complex_sentence_structure):
         space = (clumps[i]=="_" and clumps[i-1]!=".")
         # print(clumps[i],"Height",height)
         if(end_of_sentence or (overflow_space and space) or (overflow_end and end_of_sentence)):
-            # print("Z",clumps[i],height,line_break_height)
+            if(debug):
+                print("Z",clumps[i],height,line_break_height,word_start,sentence_start)
             # print(height+ending_height*get_svg_size("_.svg")[1])
             
             # Case 1: Overflow.
-            if(overflow_end and end_of_sentence):
-                # print("Overflow (period)",height,"->",height-(carry_over_height+ending_height*get_svg_size("_.svg")[1]-get_svg_size("newline2.svg")[1]),
-                #       "("+str(carry_over_height)+")")
+            if(overflow_end and end_of_sentence and word_start!=sentence_start):
+                if(debug):
+                    print("Overflow (period)",height,"->",height-(carry_over_height+ending_height*get_svg_size("_.svg")[1]-get_svg_size("newline2.svg")[1]),
+                        "("+str(carry_over_height)+")")
                 force_line_breaks.append(word_start)
                 complex_sentence_indicies.append(sentence_start)
                 figsize_x += get_svg_size("start.svg")[0]*padding_factor
@@ -358,8 +360,9 @@ def calculate_window_size(clumps,line_break_height,complex_sentence_structure):
                 if(word_start in force_line_breaks):
                     height += carry_over_height
             if(overflow_space and space and word_start != 0):
-                # print("Overflow (space)",height,"->",height-(carry_over_height+0*get_svg_size("_.svg")[1]-get_svg_size("newline2.svg")[1])
-                #       ,"("+str(carry_over_height)+")")
+                if(debug):
+                    print("Overflow (space)",height,"->",height-(carry_over_height+0*get_svg_size("_.svg")[1]-get_svg_size("newline2.svg")[1])
+                        ,"("+str(carry_over_height)+")")
                 force_line_breaks.append(word_start)
                 complex_sentence_indicies.append(sentence_start)
                 figsize_x += get_svg_size("start.svg")[0]*padding_factor
@@ -374,7 +377,8 @@ def calculate_window_size(clumps,line_break_height,complex_sentence_structure):
                     height += carry_over_height
             # Case 2: Period.
             if(end_of_sentence):
-                # print("Period")
+                if(debug):
+                    print("Period")
                 height += ending_height*get_svg_size("_.svg")[1]
                 if(clumps[i]=="!"):
                     height += get_svg_size("!.svg")[1]
@@ -455,7 +459,7 @@ def image(imagename,ax,line,height,color,repeat=1):
 # plt.title("\""+string+"\"\n I have and always shall be your friend.")
 # plt.title("\""+string+"\"\n "+translate)
 
-def generate_vulcan_calligraphy(string,line_break_height,contrast,complex_sentence_structure,dark_mode,centered_on_nuhm,debug=False):
+def generate_vulcan_calligraphy(string,line_break_height,contrast,complex_sentence_structure,dark_mode,centered_on_nuhm,debug=False,skip_tel=False):
     line_break_height = line_break_height*4 # Pixel to coordinate conversion
     if(string[-1] != "." and string[-1] != "!"):
         string += "."
@@ -467,14 +471,18 @@ def generate_vulcan_calligraphy(string,line_break_height,contrast,complex_senten
     figsize_x = 1
     figsize_y = 1
     complex_sentence_indicies = []
-    
-    figsize_x,figsize_y, complex_sentence_indicies,force_line_breaks = calculate_window_size(clumps,line_break_height,complex_sentence_structure)
+
+    figsize_x,figsize_y, complex_sentence_indicies,force_line_breaks = calculate_window_size(clumps,line_break_height,complex_sentence_structure,debug)
     
     # linewidth = 1.5*np.sqrt((1+np.max([1,figsize_x/figsize_y,figsize_y/figsize_x])**2)/2)
     # linewidth = 2.5*np.sqrt(2)/np.sqrt(1+np.max([1,figsize_x/figsize_y,figsize_y/figsize_x])**2)
     # Create the figure
-    main_fig = plt.figure(figsize=(np.max([resolution,resolution*figsize_x/figsize_y]), np.max([resolution,resolution*figsize_y/figsize_x])))
-    linewidth = 1.5*resolution/16
+    # main_fig = plt.figure(figsize=(np.max([resolution,resolution*figsize_x/figsize_y]), np.max([resolution,resolution*figsize_y/figsize_x])))
+    # main_fig = plt.figure(figsize=(2480/16,3508/16))
+    # k = np.sqrt(figsize_x/6246.4*figsize_y/10512)
+    k = np.min([figsize_x/6246.4,figsize_y/10512])
+    linewidth = 1.5*resolution/16/k
+    print(figsize_x,figsize_y)
     print("Linewidth:",linewidth)
     print("Figsize (Number of plat, y-size):",figsize_x/get_svg_size("start.svg")[0]-1,figsize_y)
 
@@ -521,7 +529,8 @@ def generate_vulcan_calligraphy(string,line_break_height,contrast,complex_senten
                     bars.append(height-get_svg_size(clumps[i-1]+".svg")[1]/2)
                 else:
                     bars.append(height)
-                curve(bars,main_axs[0],line,linewidth,contrast,color)
+                if(not skip_tel):
+                    curve(bars,main_axs[0],line,linewidth,contrast,color)
             
             if(complex_sentence_structure):
                 subbar_position = get_svg_size("start.svg")[1]+get_svg_size("newline4.svg")[1]/2
@@ -557,7 +566,8 @@ def generate_vulcan_calligraphy(string,line_break_height,contrast,complex_senten
                     bars.append(height-get_svg_size(clumps[i-1]+".svg")[1]/2)
                 else:
                     bars.append(height)
-                curve(bars,main_axs[0],line,linewidth,contrast,color)
+                if(not skip_tel):
+                    curve(bars,main_axs[0],line,linewidth,contrast,color)
             # If another nuhm can be fitted within the line_break_height
             if(height+space_height*get_svg_size("_.svg")[1] < line_break_height and
                 i+1 not in force_line_breaks):
@@ -607,8 +617,7 @@ def generate_vulcan_calligraphy(string,line_break_height,contrast,complex_senten
         main_axs[0].hlines(y=line_break_height,xmin=-get_svg_size("start.svg")[0],xmax=get_svg_size("start.svg")[0]+line,color="red",linestyle="--",linewidth=linewidth*1.5)
         # list_of_words = [1648.0,2576.0,3504.0,4432.0,5360.0,6288.0,7216.0,8144.0,9072.0,10000.0]
         # main_axs[0].hlines(y=list_of_words,xmin=-get_svg_size("start.svg")[0],xmax=get_svg_size("start.svg")[0]+line,color="lime",linestyle="--",linewidth=linewidth*1.5)
-    # main_fig.tight_layout()
-    main_fig.savefig(current_directory+"/Generated text.png")
+    main_fig.savefig(current_directory+"/Generated text.png",dpi=300)
 
 # generate_vulcan_calligraphy(string)
 

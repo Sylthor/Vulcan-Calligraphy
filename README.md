@@ -75,10 +75,10 @@ For producing the *tel* in this script, I used the following set of guidelines:
 3) When comparing two *tel*, the best one is where all arcs extend equally far from the *plat*.
 
 The *tel* has to cross the *plat* where the hyphen is placed. For a two-word compound, there will be one hyphen and therefore one crossing. For $n+1$-word compounds, there will be $n$ crossings. A flexible function to model alternating crossings is the polynomial function 
-$$p(x)=(x-b_1)(x-a_1)(x-a_2)...(a_n)(x-b_2),$$
+$$p(x)=(x-b_1)(x-a_1)(x-a_2)...(x-a_n)(x-b_2),$$
 where $a_k$ is the position of the crossings, and $b_1$ and $b_2$ are the start and the finish of the word. This satisfies both guidelines (2) and (3).
 
-This does have some problems, since polynomials have a tendency to become extremely large towards the endpoints, or between two crossings separated by a greater relative distance than the other crossings. To modify this, but maintain the smoothness of the function as described in guideline (2), we multiply the polynomial by an exponential function with a free parameter as $f(x,c)=p(x)e^{cx}$, where $c\in[-0.1,0.1]$.
+This does have some problems, since polynomials have a tendency to become extremely large towards the endpoints, or between two crossings separated by a greater relative distance than the other crossings. To modify this, but maintain the smoothness of the function as described in guideline (2), we multiply the polynomial by an exponential function with a free parameter as $f(x,c)=p(x)e^{cx}$, where $c\in[-0.05,0.05]$.
 
 We also introduce a metric to assess how "swishy" the *tel* is. A good *tel* in my view has local extrema that are more or less equally far from the *plat* on both sides. We do not want a swirl to have a massive bump and then become flat for the rest of the compound word. The metric used to achieve this is defined as
 $$
